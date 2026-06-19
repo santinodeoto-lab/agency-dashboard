@@ -1,39 +1,20 @@
-'use client'
+import { redirect } from 'next/navigation'
+import { loginAction } from './actions'
+import { createClient } from '@/lib/supabase/server'
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const { error } = await searchParams
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const supabase = createClient()
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (error) {
-      setError('Email o contraseña incorrectos')
-      setLoading(false)
-      return
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .single()
-
-    if (profile?.role === 'admin') {
-      window.location.href = '/dashboard'
-    } else {
-      window.location.href = '/portal'
-    }
+  // Si ya tiene sesión, redirigir
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    redirect(profile?.role === 'admin' ? '/dashboard' : '/portal')
   }
 
   return (
@@ -44,15 +25,12 @@ export default function LoginPage() {
           <p className="text-gray-400 mt-2">Iniciá sesión para continuar</p>
         </div>
 
-        <form onSubmit={handleLogin} className="bg-gray-900 rounded-xl p-8 space-y-5">
+        <form action={loginAction} className="bg-gray-900 rounded-xl p-8 space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
             <input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              name="email"
               required
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
               placeholder="tu@email.com"
@@ -60,29 +38,25 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Contraseña
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Contraseña</label>
             <input
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              name="password"
               required
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
               placeholder="••••••••"
             />
           </div>
 
-          {error && (
-            <p className="text-red-400 text-sm">{error}</p>
+          {error === 'invalid' && (
+            <p className="text-red-400 text-sm">Email o contraseña incorrectos</p>
           )}
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg px-4 py-3 transition-colors"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-3 transition-colors"
           >
-            {loading ? 'Ingresando...' : 'Ingresar'}
+            Ingresar
           </button>
         </form>
       </div>
