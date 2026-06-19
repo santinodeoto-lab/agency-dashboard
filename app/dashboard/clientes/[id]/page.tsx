@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
+// DeleteConnection uses window.location.reload() — no router needed
 import Link from 'next/link'
 
 const OBJETIVO_COLORS: Record<string, string> = {
@@ -122,14 +123,17 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
               {metaConnections && metaConnections.length > 0 ? (
                 <div className="space-y-2 mb-3">
                   {metaConnections.map(conn => (
-                    <div key={conn.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
-                      <div>
-                        <p className="text-sm font-medium">{conn.account_name}</p>
+                    <div key={conn.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2 gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{conn.account_name}</p>
                         <p className="text-xs text-gray-500">act_{conn.account_id}</p>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${conn.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                        {conn.status === 'active' ? 'Conectado' : 'Expirado'}
-                      </span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${conn.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                          {conn.status === 'active' ? 'Conectado' : 'Expirado'}
+                        </span>
+                        <DeleteConnection connectionId={conn.id} />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -207,6 +211,26 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
     </div>
+  )
+}
+
+function DeleteConnection({ connectionId }: { connectionId: string }) {
+  return (
+    <button
+      onClick={async () => {
+        if (!confirm('¿Eliminar esta cuenta de Meta Ads?')) return
+        await fetch('/api/meta/delete-connection', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: connectionId }),
+        })
+        window.location.reload()
+      }}
+      className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none"
+      title="Eliminar conexión"
+    >
+      ×
+    </button>
   )
 }
 
