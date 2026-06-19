@@ -36,7 +36,7 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
 
   const { data: cliente } = await supabase
     .from('clients')
-    .select('*, campaign_objective_types(key, label)')
+    .select('*')
     .eq('id', id)
     .single()
 

@@ -18,11 +18,21 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: clientes } = await supabase
+  let { data: clientes, error: clientesError } = await supabase
     .from('clients')
     .select('id, name, status, fee_amount, fee_currency, objectives, logo_url')
     .eq('status', 'active')
     .order('name')
+
+  // Fallback if new columns not in schema cache yet
+  if (clientesError) {
+    const fallback = await supabase
+      .from('clients')
+      .select('id, name, status, fee_amount, fee_currency')
+      .eq('status', 'active')
+      .order('name')
+    clientes = fallback.data
+  }
 
   return (
     <div className="p-8">
