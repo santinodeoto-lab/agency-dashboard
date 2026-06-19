@@ -13,50 +13,47 @@ const OBJECTIVE_LABELS: Record<string, string> = {
   sales: 'Ventas', leads: 'Leads', whatsapp: 'WhatsApp', branding: 'Branding',
 }
 
+type Cliente = {
+  id: string
+  name: string
+  status: string
+  objectives?: string[]
+  logo_url?: string | null
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  let { data: clientes } = await supabase
+  const { data: raw } = await supabase
     .from('clients')
-    .select('id, name, status, fee_amount, fee_currency, objectives, logo_url')
+    .select('id, name, status, objectives, logo_url')
     .eq('status', 'active')
     .order('name')
 
-  // Fallback if new columns not in schema cache yet
-  if (!clientes) {
-    const fallback = await supabase
-      .from('clients')
-      .select('id, name, status, fee_amount, fee_currency')
-      .eq('status', 'active')
-      .order('name')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    clientes = fallback.data as any
-  }
+  const clientes: Cliente[] = (raw ?? []) as Cliente[]
 
   return (
     <div className="p-8">
       <h1 className="text-xl font-semibold text-gray-200 mb-6">Clientes activos</h1>
 
-      {(!clientes || clientes.length === 0) && (
+      {clientes.length === 0 && (
         <p className="text-gray-500 text-sm">No hay clientes activos.</p>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {clientes?.map((cliente) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const objKey = ((cliente as any).objectives?.[0]) ?? ''
+        {clientes.map((cliente) => {
+          const objKey = cliente.objectives?.[0] ?? ''
           return (
             <Link
               key={cliente.id}
               href={`/dashboard/clientes/${cliente.id}`}
               className="group bg-gray-900 hover:bg-gray-800 rounded-2xl p-6 flex flex-col items-center gap-3 transition-colors border border-transparent hover:border-gray-700"
             >
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {(cliente as any).logo_url ? (
+              {cliente.logo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={(cliente as any).logo_url} alt={cliente.name} className="w-16 h-16 rounded-full object-cover flex-shrink-0" />
+                <img src={cliente.logo_url} alt={cliente.name} className="w-16 h-16 rounded-full object-cover flex-shrink-0" />
               ) : (
                 <div className="w-16 h-16 rounded-full bg-gray-700 group-hover:bg-gray-600 flex items-center justify-center text-2xl font-bold text-white transition-colors flex-shrink-0">
                   {cliente.name.charAt(0).toUpperCase()}
