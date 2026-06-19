@@ -36,6 +36,12 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
     .eq('client_id', id)
     .order('updated_at', { ascending: false })
 
+  const { data: metaConnections } = await supabase
+    .from('ad_platform_connections')
+    .select('id, account_name, account_id, status, token_expires_at')
+    .eq('client_id', id)
+    .eq('platform', 'meta')
+
   const objKey = cliente.campaign_objective_types?.key ?? ''
 
   return (
@@ -108,6 +114,32 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
                   <p className="text-sm capitalize">{cliente.status === 'active' ? 'Activo' : cliente.status === 'paused' ? 'Pausado' : 'Inactivo'}</p>
                 </div>
               </div>
+            </div>
+
+            {/* Meta Ads */}
+            <div className="bg-gray-900 rounded-xl p-5">
+              <h2 className="text-sm font-semibold text-gray-400 mb-3">Meta Ads</h2>
+              {metaConnections && metaConnections.length > 0 ? (
+                <div className="space-y-2 mb-3">
+                  {metaConnections.map(conn => (
+                    <div key={conn.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
+                      <div>
+                        <p className="text-sm font-medium">{conn.account_name}</p>
+                        <p className="text-xs text-gray-500">act_{conn.account_id}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${conn.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {conn.status === 'active' ? 'Conectado' : 'Expirado'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 mb-3">Sin cuentas conectadas</p>
+              )}
+              <a href={`/api/meta/connect?client_id=${id}`}
+                className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">
+                {metaConnections && metaConnections.length > 0 ? 'Reconectar / agregar cuenta' : 'Conectar Meta Ads'}
+              </a>
             </div>
 
             {/* Links rápidos */}
