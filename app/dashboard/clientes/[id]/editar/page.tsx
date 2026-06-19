@@ -46,7 +46,7 @@ export default function EditarClientePage() {
     async function load() {
       const { data: cliente } = await supabase
         .from('clients')
-        .select('*, campaign_objective_types(key)')
+        .select('*')
         .eq('id', id)
         .single()
 
@@ -67,9 +67,10 @@ export default function EditarClientePage() {
         setLogoPreview(cliente.logo_url ?? null)
 
         // Load objectives: prefer new array, fall back to FK
-        const existing: string[] = (cliente.objectives && cliente.objectives.length > 0)
-          ? cliente.objectives
-          : (cliente.campaign_objective_types?.key ? [cliente.campaign_objective_types.key] : [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const existing: string[] = (cliente.objectives && (cliente.objectives as any).length > 0)
+          ? cliente.objectives as string[]
+          : []
         setSelectedObjectives(existing)
       }
       setLoading(false)
