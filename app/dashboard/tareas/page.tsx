@@ -126,7 +126,7 @@ export default function TareasPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Link prefetch={false} href="/dashboard" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← Panel Admin</Link>
+            <Link href="/dashboard" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← Panel Admin</Link>
             <div className="flex items-center gap-3 mt-1">
               <h1 className="text-2xl font-bold">Tareas</h1>
               {urgentes > 0 && (
@@ -248,7 +248,7 @@ export default function TareasPage() {
                       </span>
                     )}
                     {task.clients && (
-                      <Link prefetch={false} href={`/dashboard/clientes/${task.client_id}`}
+                      <Link href={`/dashboard/clientes/${task.client_id}`}
                         className="text-xs text-gray-400 hover:text-blue-400 transition-colors">
                         {task.clients.name}
                       </Link>

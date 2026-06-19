@@ -2,75 +2,60 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+const OBJECTIVE_COLORS: Record<string, string> = {
+  sales:    'bg-blue-500/20 text-blue-400',
+  leads:    'bg-purple-500/20 text-purple-400',
+  whatsapp: 'bg-green-500/20 text-green-400',
+  branding: 'bg-orange-500/20 text-orange-400',
+}
+
+const OBJECTIVE_LABELS: Record<string, string> = {
+  sales: 'Ventas', leads: 'Leads', whatsapp: 'WhatsApp', branding: 'Branding',
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, role')
-    .eq('id', user.id)
-    .single()
-
   const { data: clientes } = await supabase
     .from('clients')
-    .select('id, status, fee_amount, fee_currency')
-
-  const activos = clientes?.filter(c => c.status === 'active') ?? []
-  const totalMensual = activos.reduce((sum, c) => sum + Number(c.fee_amount), 0)
-
-  const { data: tareas } = await supabase
-    .from('tasks')
-    .select('id')
-    .eq('status', 'pending')
-
-  const NAV = [
-    { label: 'Clientes', href: '/dashboard/clientes', desc: 'CRM y fichas' },
-    { label: 'Finanzas', href: '/dashboard/finanzas', desc: 'Cobros y vencimientos' },
-    { label: 'Tareas', href: '/dashboard/tareas', desc: 'Por cliente y globales' },
-    { label: 'Pipeline', href: '/dashboard/pipeline', desc: 'Oportunidades comerciales' },
-  ]
+    .select('id, name, status, fee_amount, fee_currency, campaign_objective_types(key)')
+    .eq('status', 'active')
+    .order('name')
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold">Panel Admin</h1>
-            <p className="text-gray-400 text-sm mt-0.5">Bienvenido, {profile?.full_name ?? user.email}</p>
-          </div>
-          <Link prefetch={false} href="/logout" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">
-            Cerrar sesión
-          </Link>
-        </div>
+    <div className="p-8">
+      <h1 className="text-xl font-semibold text-gray-200 mb-6">Clientes activos</h1>
 
-        {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-gray-900 rounded-xl p-5">
-            <p className="text-gray-400 text-sm">Clientes activos</p>
-            <p className="text-3xl font-bold mt-1">{activos.length}</p>
-          </div>
-          <div className="bg-gray-900 rounded-xl p-5">
-            <p className="text-gray-400 text-sm">Ingresos mensuales</p>
-            <p className="text-3xl font-bold mt-1">USD {totalMensual.toLocaleString()}</p>
-          </div>
-          <div className="bg-gray-900 rounded-xl p-5">
-            <p className="text-gray-400 text-sm">Tareas pendientes</p>
-            <p className="text-3xl font-bold mt-1">{tareas?.length ?? 0}</p>
-          </div>
-        </div>
+      {(!clientes || clientes.length === 0) && (
+        <p className="text-gray-500 text-sm">No hay clientes activos.</p>
+      )}
 
-        {/* Navegación */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {NAV.map(item => (
-            <a key={item.href} href={item.href}
-              className="bg-gray-900 hover:bg-gray-800 rounded-xl p-5 transition-colors">
-              <p className="font-semibold">{item.label}</p>
-              <p className="text-gray-400 text-sm mt-1">{item.desc}</p>
-            </a>
-          ))}
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {clientes?.map((cliente) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const objKey = (cliente.campaign_objective_types as any)?.key ?? ''
+          return (
+            <Link
+              key={cliente.id}
+              href={`/dashboard/clientes/${cliente.id}`}
+              className="group bg-gray-900 hover:bg-gray-800 rounded-2xl p-6 flex flex-col items-center gap-3 transition-colors border border-transparent hover:border-gray-700"
+            >
+              <div className="w-16 h-16 rounded-full bg-gray-700 group-hover:bg-gray-600 flex items-center justify-center text-2xl font-bold text-white transition-colors flex-shrink-0">
+                {cliente.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-white leading-tight">{cliente.name}</p>
+                {objKey && (
+                  <span className={`inline-block mt-1.5 text-xs px-2 py-0.5 rounded-full font-medium ${OBJECTIVE_COLORS[objKey] ?? 'bg-gray-700 text-gray-400'}`}>
+                    {OBJECTIVE_LABELS[objKey] ?? objKey}
+                  </span>
+                )}
+              </div>
+            </Link>
+          )
+        })}
       </div>
     </div>
   )

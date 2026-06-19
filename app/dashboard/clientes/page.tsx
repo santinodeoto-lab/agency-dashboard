@@ -48,7 +48,7 @@ export default async function ClientesPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Link prefetch={false} href="/dashboard" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">
+            <Link href="/dashboard" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">
               ← Panel Admin
             </Link>
             <h1 className="text-2xl font-bold mt-1">Clientes</h1>
