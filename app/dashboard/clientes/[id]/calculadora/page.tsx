@@ -204,7 +204,7 @@ export default function CalculadoraPage() {
                     <>
                       <div className="bg-gray-800 rounded-lg p-4">
                         <p className="text-gray-400 text-xs">CPL objetivo</p>
-                        <p className="text-2xl font-bold mt-1">{form.currency} {fmt(preview.target_cpl)}</p>
+                        <p className="text-2xl font-bold mt-1">{form.currency} {fmt(preview.target_cpl, 2)}</p>
                       </div>
                       <div className="bg-gray-800 rounded-lg p-4">
                         <p className="text-gray-400 text-xs">Leads necesarios / mes</p>
