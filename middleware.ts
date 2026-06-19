@@ -4,7 +4,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
-  // Anon client — maneja cookies de sesión correctamente
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -24,13 +23,20 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // getSession valida el JWT localmente sin llamada de red — más rápido y confiable
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user ?? null
 
   const { pathname } = request.nextUrl
 
   // Sin sesión → login
   if (!user && pathname !== '/login') {
-    return NextResponse.redirect(new URL('/login', request.url))
+    const response = NextResponse.redirect(new URL('/login', request.url))
+    // Copiar cookies para no perder el refresh
+    supabaseResponse.cookies.getAll().forEach(({ name, value, ...opts }) =>
+      response.cookies.set(name, value, opts)
+    )
+    return response
   }
 
   // Con sesión en /login → redirigir según rol
@@ -59,7 +65,6 @@ export async function middleware(request: NextRequest) {
 }
 
 async function getRole(userId: string): Promise<string | null> {
-  // Service role para leer perfiles sin que RLS bloquee
   const admin = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
