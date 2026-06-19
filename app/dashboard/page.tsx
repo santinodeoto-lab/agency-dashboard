@@ -53,9 +53,15 @@ export default async function DashboardPage() {
               href={`/dashboard/clientes/${cliente.id}`}
               className="group bg-gray-900 hover:bg-gray-800 rounded-2xl p-6 flex flex-col items-center gap-3 transition-colors border border-transparent hover:border-gray-700"
             >
-              <div className="w-16 h-16 rounded-full bg-gray-700 group-hover:bg-gray-600 flex items-center justify-center text-2xl font-bold text-white transition-colors flex-shrink-0">
-                {cliente.name.charAt(0).toUpperCase()}
-              </div>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {(cliente as any).logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={(cliente as any).logo_url} alt={cliente.name} className="w-16 h-16 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gray-700 group-hover:bg-gray-600 flex items-center justify-center text-2xl font-bold text-white transition-colors flex-shrink-0">
+                  {cliente.name.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div className="text-center">
                 <p className="text-sm font-semibold text-white leading-tight">{cliente.name}</p>
                 {objKey && (
