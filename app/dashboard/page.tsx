@@ -44,7 +44,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {clientes.map((cliente) => {
-          const objKey = cliente.objectives?.[0] ?? ''
+          const objectives = cliente.objectives ?? []
           return (
             <Link
               key={cliente.id}
@@ -61,10 +61,14 @@ export default async function DashboardPage() {
               )}
               <div className="text-center">
                 <p className="text-sm font-semibold text-white leading-tight">{cliente.name}</p>
-                {objKey && (
-                  <span className={`inline-block mt-1.5 text-xs px-2 py-0.5 rounded-full font-medium ${OBJECTIVE_COLORS[objKey] ?? 'bg-gray-700 text-gray-400'}`}>
-                    {OBJECTIVE_LABELS[objKey] ?? objKey}
-                  </span>
+                {objectives.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1 mt-1.5">
+                    {objectives.map(key => (
+                      <span key={key} className={`text-xs px-2 py-0.5 rounded-full font-medium ${OBJECTIVE_COLORS[key] ?? 'bg-gray-700 text-gray-400'}`}>
+                        {OBJECTIVE_LABELS[key] ?? key}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
             </Link>
