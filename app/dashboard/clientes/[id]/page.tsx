@@ -45,7 +45,7 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
   const [{ data: logs }, { data: notas }, { data: metaConnections }] = await Promise.all([
     supabase.from('client_log_entries').select('*').eq('client_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('client_notes').select('*').eq('client_id', id).order('updated_at', { ascending: false }),
-    supabase.from('ad_platform_connections').select('id, account_name, account_id, status, token_expires_at').eq('client_id', id).eq('platform', 'meta'),
+    supabase.from('ad_platform_connections').select('id, account_name, account_id, status, token_expires_at').eq('client_id', id).eq('platform', 'meta').throwOnError(false),
   ])
 
   // Objectives: prefer new multi-select array, fall back to old FK
