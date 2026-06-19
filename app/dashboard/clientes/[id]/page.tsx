@@ -137,20 +137,36 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Meta Ads</h2>
             {metaConnections && metaConnections.length > 0 ? (
               <div className="space-y-2 mb-3">
-                {metaConnections.map(conn => (
-                  <div key={conn.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2 gap-2">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium truncate">{conn.account_name}</p>
-                      <p className="text-xs text-gray-500">act_{conn.account_id}</p>
+                {metaConnections.map(conn => {
+                  const expiresAt = conn.token_expires_at ? new Date(conn.token_expires_at) : null
+                  const daysLeft = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null
+                  const expiringSoon = daysLeft !== null && daysLeft <= 10
+                  const expired = daysLeft !== null && daysLeft <= 0
+                  return (
+                    <div key={conn.id}>
+                      <div className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2 gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium truncate">{conn.account_name}</p>
+                          <p className="text-xs text-gray-500">act_{conn.account_id}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${conn.status === 'active' && !expired ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>●</span>
+                          <DeleteConnection connectionId={conn.id} />
+                        </div>
+                      </div>
+                      {(expiringSoon || expired) && (
+                        <div className={`mt-1 rounded-lg px-3 py-2 flex items-center justify-between gap-2 ${expired ? 'bg-red-500/10 border border-red-500/30' : 'bg-yellow-500/10 border border-yellow-500/30'}`}>
+                          <p className={`text-xs ${expired ? 'text-red-400' : 'text-yellow-400'}`}>
+                            {expired ? 'Token vencido' : `Token vence en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`}
+                          </p>
+                          <a href={`/api/meta/connect?client_id=${id}`} className={`text-xs font-medium px-2 py-1 rounded-md transition-colors flex-shrink-0 ${expired ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30'}`}>
+                            Renovar
+                          </a>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${conn.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                        {conn.status === 'active' ? '●' : '●'}
-                      </span>
-                      <DeleteConnection connectionId={conn.id} />
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="text-xs text-gray-500 mb-3">Sin cuentas conectadas</p>
