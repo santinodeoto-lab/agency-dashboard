@@ -17,8 +17,8 @@ export async function GET() {
     const { data, error } = await supabase.auth.getUser()
     user = data.user ? { id: data.user.id, email: data.user.email } : null
     authError = error?.message ?? null
-  } catch (e: any) {
-    authError = e.message
+  } catch (e) {
+    authError = e instanceof Error ? e.message : 'unknown'
   }
 
   return NextResponse.json({
