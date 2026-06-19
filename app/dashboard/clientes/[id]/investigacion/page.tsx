@@ -351,33 +351,36 @@ export default function InvestigacionPage() {
                   />
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => updateCompetitor(comp.id, { runs_meta_ads: !comp.runs_meta_ads })}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${comp.runs_meta_ads ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-gray-800 text-gray-400 border border-gray-700'}`}>
-                    <span className={`w-3 h-3 rounded-full ${comp.runs_meta_ads ? 'bg-blue-400' : 'bg-gray-600'}`} />
-                    {comp.runs_meta_ads ? 'Hace Meta Ads' : 'No hace Meta Ads'}
-                  </button>
-                </div>
-
-                {comp.runs_meta_ads && (
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1.5">URL Biblioteca de anuncios</label>
-                    <input
-                      value={comp.ad_library_url ?? ''}
-                      onChange={e => setCompetitors(prev => prev.map(c => c.id === comp.id ? { ...c, ad_library_url: e.target.value } : c))}
-                      onBlur={e => updateCompetitor(comp.id, { ad_library_url: e.target.value })}
-                      placeholder="https://www.facebook.com/ads/library/?..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                    />
-                    {comp.ad_library_url && (
-                      <a href={comp.ad_library_url} target="_blank" rel="noopener noreferrer"
-                        className="text-xs text-blue-400 hover:underline mt-1 inline-block">
-                        Abrir biblioteca →
-                      </a>
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">Corre anuncios</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => updateCompetitor(comp.id, { runs_meta_ads: true })}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${comp.runs_meta_ads ? 'bg-green-500/20 text-green-400 border border-green-500/40' : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-500'}`}>
+                      Sí
+                    </button>
+                    <button
+                      onClick={() => updateCompetitor(comp.id, { runs_meta_ads: false, ad_library_url: null })}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!comp.runs_meta_ads ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-500'}`}>
+                      No
+                    </button>
+                    {comp.runs_meta_ads && (
+                      <input
+                        value={comp.ad_library_url ?? ''}
+                        onChange={e => setCompetitors(prev => prev.map(c => c.id === comp.id ? { ...c, ad_library_url: e.target.value } : c))}
+                        onBlur={e => updateCompetitor(comp.id, { ad_library_url: e.target.value })}
+                        placeholder="URL Biblioteca de anuncios"
+                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                      />
                     )}
                   </div>
-                )}
+                  {comp.runs_meta_ads && comp.ad_library_url && (
+                    <a href={comp.ad_library_url} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-blue-400 hover:underline mt-1.5 inline-block">
+                      Abrir biblioteca →
+                    </a>
+                  )}
+                </div>
               </div>
             ))}
 
@@ -398,18 +401,25 @@ export default function InvestigacionPage() {
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" />
                 </div>
               </div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <button
-                  onClick={() => setNewComp(f => ({ ...f, runs_meta_ads: !f.runs_meta_ads }))}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${newComp.runs_meta_ads ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-gray-800 text-gray-400 border border-gray-700'}`}>
-                  <span className={`w-3 h-3 rounded-full ${newComp.runs_meta_ads ? 'bg-blue-400' : 'bg-gray-600'}`} />
-                  {newComp.runs_meta_ads ? 'Hace Meta Ads' : 'No hace Meta Ads'}
-                </button>
-                {newComp.runs_meta_ads && (
-                  <input value={newComp.ad_library_url} onChange={e => setNewComp(f => ({ ...f, ad_library_url: e.target.value }))}
-                    placeholder="URL Biblioteca de anuncios"
-                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" />
-                )}
+              <div>
+                <p className="text-xs text-gray-400 mb-2">Corre anuncios</p>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => setNewComp(f => ({ ...f, runs_meta_ads: true }))}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${newComp.runs_meta_ads ? 'bg-green-500/20 text-green-400 border border-green-500/40' : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-500'}`}>
+                    Sí
+                  </button>
+                  <button
+                    onClick={() => setNewComp(f => ({ ...f, runs_meta_ads: false, ad_library_url: '' }))}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!newComp.runs_meta_ads ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-500'}`}>
+                    No
+                  </button>
+                  {newComp.runs_meta_ads && (
+                    <input value={newComp.ad_library_url} onChange={e => setNewComp(f => ({ ...f, ad_library_url: e.target.value }))}
+                      placeholder="URL Biblioteca de anuncios"
+                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+                  )}
+                </div>
               </div>
               <button onClick={addCompetitor} disabled={addingComp || !newComp.name}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors text-sm">
