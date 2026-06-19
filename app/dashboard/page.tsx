@@ -64,11 +64,11 @@ export default async function DashboardPage() {
         {/* Navegación */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {NAV.map(item => (
-            <Link key={item.href} href={item.href}
+            <a key={item.href} href={item.href}
               className="bg-gray-900 hover:bg-gray-800 rounded-xl p-5 transition-colors">
               <p className="font-semibold">{item.label}</p>
               <p className="text-gray-400 text-sm mt-1">{item.desc}</p>
-            </Link>
+            </a>
           ))}
         </div>
       </div>
