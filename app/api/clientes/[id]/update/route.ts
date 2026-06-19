@@ -16,7 +16,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     console.error('Client update error:', error)
     // If objectives or logo_url column missing, retry without them
     if (error.message.includes('objectives') || error.message.includes('logo_url')) {
-      const { objectives, logo_url, ...rest } = body
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { objectives: _o, logo_url: _l, ...rest } = body
       const { error: fallbackError } = await supabase.from('clients').update(rest).eq('id', id)
       if (fallbackError) {
         console.error('Client update fallback error:', fallbackError)
