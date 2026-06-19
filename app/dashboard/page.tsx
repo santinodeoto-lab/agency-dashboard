@@ -4,8 +4,19 @@ import Link from 'next/link'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  // Debug temporal
+  if (!user) {
+    return (
+      <div style={{background:'#000',color:'#fff',padding:'2rem',fontFamily:'monospace'}}>
+        <h1>AUTH FALLO en /dashboard</h1>
+        <p>Error: {authError?.message ?? 'null'}</p>
+        <p>Error status: {authError?.status ?? 'null'}</p>
+        <p><a href="/login" style={{color:'#60a5fa'}}>Volver a login</a></p>
+      </div>
+    )
+  }
 
   const { data: profile } = await supabase
     .from('profiles')
