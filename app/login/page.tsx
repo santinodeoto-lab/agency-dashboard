@@ -1,21 +1,9 @@
-import { redirect } from 'next/navigation'
-import { loginAction } from './actions'
-import { createClient } from '@/lib/supabase/server'
-
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>
 }) {
   const { error } = await searchParams
-
-  // Si ya tiene sesión, redirigir
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user) {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    redirect(profile?.role === 'admin' ? '/dashboard' : '/portal')
-  }
 
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
@@ -25,7 +13,7 @@ export default async function LoginPage({
           <p className="text-gray-400 mt-2">Iniciá sesión para continuar</p>
         </div>
 
-        <form action={loginAction} className="bg-gray-900 rounded-xl p-8 space-y-5">
+        <form action="/api/auth/login" method="POST" className="bg-gray-900 rounded-xl p-8 space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
             <input
