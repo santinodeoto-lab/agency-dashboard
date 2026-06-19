@@ -25,16 +25,19 @@ export default function LoginPage() {
       return
     }
 
-    // Verificar qué cookies hay inmediatamente después del login
-    const cookiesBefore = document.cookie
-    setDebug('Cookies tras login: ' + (cookiesBefore || '(ninguna)'))
+    // Verificar qué ve el SERVIDOR justo después del login
+    const serverCheck = await fetch('/api/debug', { credentials: 'include' })
+    const serverData = await serverCheck.json()
+    setDebug(
+      'Browser cookies: ' + (document.cookie ? document.cookie.substring(0, 60) + '...' : '(ninguna)') +
+      ' | Servidor ve: ' + serverData.cookieCount + ' cookies, user=' + (serverData.user?.email ?? 'null')
+    )
 
     // Verificar la sesión
     const { data: { session } } = await supabase.auth.getSession()
-    setDebug(prev => prev + ' | Sesión: ' + (session ? 'OK user=' + data.user?.email : 'NULL'))
 
     if (!session) {
-      setError('Login ok pero sesión null. Ver debug arriba.')
+      setError('Login ok pero sesión null.')
       setLoading(false)
       return
     }
