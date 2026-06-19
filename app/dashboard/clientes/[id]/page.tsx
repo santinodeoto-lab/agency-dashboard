@@ -42,11 +42,15 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
 
   if (!cliente) notFound()
 
-  const [{ data: logs }, { data: notas }, { data: metaConnections }] = await Promise.all([
+  const [{ data: logs }, { data: notas }, metaResult] = await Promise.all([
     supabase.from('client_log_entries').select('*').eq('client_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('client_notes').select('*').eq('client_id', id).order('updated_at', { ascending: false }),
-    supabase.from('ad_platform_connections').select('id, account_name, account_id, status, token_expires_at').eq('client_id', id).eq('platform', 'meta').throwOnError(false),
+    supabase.from('ad_platform_connections').select('id, account_name, account_id, status, token_expires_at').eq('client_id', id).eq('platform', 'meta'),
   ])
+  // Fall back to without token_expires_at if column doesn't exist yet
+  const metaConnections = metaResult.error?.message?.includes('token_expires_at')
+    ? (await supabase.from('ad_platform_connections').select('id, account_name, account_id, status').eq('client_id', id).eq('platform', 'meta')).data
+    : metaResult.data
 
   // Objectives: prefer new multi-select array, fall back to old FK
   const objectives: string[] = (cliente.objectives && cliente.objectives.length > 0)
