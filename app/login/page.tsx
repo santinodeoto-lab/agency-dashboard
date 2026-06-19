@@ -32,9 +32,9 @@ export default function LoginPage() {
       .single()
 
     if (profile?.role === 'admin') {
-      router.push('/dashboard')
+      window.location.href = '/dashboard'
     } else {
-      router.push('/portal')
+      window.location.href = '/portal'
     }
   }
 
