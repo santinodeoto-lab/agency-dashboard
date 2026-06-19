@@ -105,7 +105,7 @@ export default function CalculadoraPage() {
         <div className="mb-8">
           <Link href={`/dashboard/clientes/${id}`} className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← {clientName || 'Cliente'}</Link>
           <h1 className="text-2xl font-bold mt-1">Calculadora de presupuesto</h1>
-          <p className="text-gray-400 text-sm mt-1">Calculá los KPIs objetivo a partir del ticket promedio y el margen</p>
+          <p className="text-gray-400 text-sm mt-1">Calculá los KPIs objetivo a partir del ticket promedio y cuánto estás dispuesto a invertir en publicidad</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -143,7 +143,7 @@ export default function CalculadoraPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1.5">Margen bruto %</label>
+                <label className="block text-xs text-gray-400 mb-1.5">% dispuesto a invertir en ads</label>
                 <input type="number" min="1" max="100" value={form.margin_pct} onChange={e => setForm(f => ({ ...f, margin_pct: e.target.value }))} required
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" />
               </div>

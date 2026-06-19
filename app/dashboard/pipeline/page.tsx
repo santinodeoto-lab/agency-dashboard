@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 type Opportunity = {
   id: string
@@ -36,13 +37,32 @@ const STAGE_COLORS: Record<string, string> = {
   lost: 'bg-red-500/20 text-red-400',
 }
 
+const OBJETIVOS = [
+  { key: 'sales', label: 'Ventas online' },
+  { key: 'leads', label: 'Generación de leads' },
+  { key: 'whatsapp', label: 'Conversaciones WhatsApp' },
+  { key: 'branding', label: 'Posicionamiento de marca' },
+]
+
+type ConvertModal = {
+  opp: Opportunity
+  fee_amount: string
+  fee_currency: string
+  payment_condition: string
+  payment_due_day: string
+  primary_objective: string
+}
+
 export default function PipelinePage() {
   const supabase = createClient()
+  const router = useRouter()
   const [opps, setOpps] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [updating, setUpdating] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [converting, setConverting] = useState(false)
+  const [convertModal, setConvertModal] = useState<ConvertModal | null>(null)
 
   const [form, setForm] = useState({
     contact_name: '',
@@ -68,6 +88,62 @@ export default function PipelinePage() {
   }
 
   useEffect(() => { loadOpps() }, [])
+
+  function openConvertModal(opp: Opportunity) {
+    setConvertModal({
+      opp,
+      fee_amount: opp.expected_monthly_value?.toString() ?? '',
+      fee_currency: opp.currency ?? 'USD',
+      payment_condition: 'advance',
+      payment_due_day: '10',
+      primary_objective: '',
+    })
+    setExpandedId(null)
+  }
+
+  async function handleConvertToClient() {
+    if (!convertModal) return
+    setConverting(true)
+
+    const { opp } = convertModal
+
+    const { data: objetivo } = await supabase
+      .from('campaign_objective_types')
+      .select('id')
+      .eq('key', convertModal.primary_objective)
+      .maybeSingle()
+
+    const { error } = await supabase.from('clients').insert({
+      name: opp.contact_name.toUpperCase(),
+      company_name: opp.company_name || null,
+      email: opp.email || null,
+      phone: opp.phone || null,
+      fee_amount: parseFloat(convertModal.fee_amount),
+      fee_currency: convertModal.fee_currency,
+      payment_condition: convertModal.payment_condition,
+      payment_due_day: parseInt(convertModal.payment_due_day),
+      payment_alert_days: 3,
+      primary_objective_id: objetivo?.id ?? null,
+      status: 'active',
+    })
+
+    if (error) {
+      alert('Error al crear el cliente: ' + error.message)
+      setConverting(false)
+      return
+    }
+
+    await fetch(`/api/pipeline/${opp.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stage: 'won' }),
+    })
+
+    setConvertModal(null)
+    setConverting(false)
+    await loadOpps()
+    router.push('/dashboard/clientes')
+  }
 
   async function handleStageChange(id: string, stage: string) {
     setUpdating(id)
@@ -146,7 +222,7 @@ export default function PipelinePage() {
           </div>
         </div>
 
-        {/* Formulario */}
+        {/* Formulario nueva oportunidad */}
         {showForm && (
           <form onSubmit={handleSubmit} className="bg-gray-900 rounded-xl p-6 mb-6 space-y-4">
             <h2 className="font-semibold text-gray-300">Nueva oportunidad</h2>
@@ -258,12 +334,20 @@ export default function PipelinePage() {
                       <p className="text-gray-400 text-sm">Cierre estimado: {new Date(opp.expected_close_date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                     )}
                     <div className="flex gap-2 flex-wrap">
-                      {STAGES.filter(s => s.key !== opp.stage && s.key !== 'lost').map(s => (
+                      {STAGES.filter(s => s.key !== opp.stage && s.key !== 'won' && s.key !== 'lost').map(s => (
                         <button key={s.key} onClick={() => handleStageChange(opp.id, s.key)} disabled={updating === opp.id}
                           className="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors">
                           → {s.label}
                         </button>
                       ))}
+                      <button onClick={() => openConvertModal(opp)} disabled={updating === opp.id}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 transition-colors font-medium">
+                        Convertir en cliente
+                      </button>
+                      <button onClick={() => handleStageChange(opp.id, 'lost')} disabled={updating === opp.id}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 transition-colors">
+                        Marcar como perdido
+                      </button>
                       <button onClick={() => handleDelete(opp.id)} disabled={updating === opp.id}
                         className="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors ml-auto">
                         Eliminar
@@ -276,6 +360,78 @@ export default function PipelinePage() {
           </div>
         )}
       </div>
+
+      {/* Modal convertir a cliente */}
+      {convertModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+          <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-md space-y-5 border border-gray-800">
+            <div>
+              <h2 className="text-lg font-bold">Convertir en cliente</h2>
+              <p className="text-gray-400 text-sm mt-1">
+                Completá los datos faltantes para dar de alta a <span className="text-white font-medium">{convertModal.opp.contact_name}</span>
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-400 mb-1.5">Fee mensual acordado</label>
+              <div className="flex gap-2">
+                <select value={convertModal.fee_currency} onChange={e => setConvertModal(m => m ? { ...m, fee_currency: e.target.value } : m)}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+                  <option>USD</option><option>ARS</option><option>EUR</option>
+                </select>
+                <input type="number" value={convertModal.fee_amount} onChange={e => setConvertModal(m => m ? { ...m, fee_amount: e.target.value } : m)}
+                  placeholder="350"
+                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Condición de pago</label>
+                <select value={convertModal.payment_condition} onChange={e => setConvertModal(m => m ? { ...m, payment_condition: e.target.value } : m)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+                  <option value="advance">Adelantado</option>
+                  <option value="arrears">Mes vencido</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Día de vencimiento</label>
+                <input type="number" min="1" max="31" value={convertModal.payment_due_day}
+                  onChange={e => setConvertModal(m => m ? { ...m, payment_due_day: e.target.value } : m)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">Objetivo de campaña</label>
+              <div className="grid grid-cols-2 gap-2">
+                {OBJETIVOS.map(obj => (
+                  <button key={obj.key} type="button"
+                    onClick={() => setConvertModal(m => m ? { ...m, primary_objective: obj.key } : m)}
+                    className={`p-2.5 rounded-lg border text-xs font-medium transition-colors text-left ${
+                      convertModal.primary_objective === obj.key
+                        ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+                        : 'border-gray-700 text-gray-400 hover:border-gray-500'
+                    }`}>
+                    {obj.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button onClick={() => setConvertModal(null)}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                Cancelar
+              </button>
+              <button onClick={handleConvertToClient} disabled={converting || !convertModal.fee_amount}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                {converting ? 'Creando...' : 'Crear cliente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
