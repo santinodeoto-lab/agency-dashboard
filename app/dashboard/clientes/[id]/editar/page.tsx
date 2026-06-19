@@ -109,7 +109,7 @@ export default function EditarClientePage() {
     <div className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-2xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <Link href={`/dashboard/clientes/${id}`} className="text-gray-500 text-sm hover:text-gray-300 transition-colors">
+          <Link prefetch={false} href={`/dashboard/clientes/${id}`} className="text-gray-500 text-sm hover:text-gray-300 transition-colors">
             ← Volver al cliente
           </Link>
           <h1 className="text-2xl font-bold mt-1">Editar cliente</h1>
@@ -207,7 +207,7 @@ export default function EditarClientePage() {
           {error && <p className="text-red-400 text-sm">{error}</p>}
 
           <div className="flex gap-3">
-            <Link href={`/dashboard/clientes/${id}`}
+            <Link prefetch={false} href={`/dashboard/clientes/${id}`}
               className="flex-1 text-center bg-gray-800 hover:bg-gray-700 text-white font-medium px-4 py-3 rounded-lg transition-colors">
               Cancelar
             </Link>

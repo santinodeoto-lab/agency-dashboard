@@ -81,7 +81,7 @@ function AsignarContent() {
     <div className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-2xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <Link href="/dashboard/clientes" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← Cancelar</Link>
+          <Link prefetch={false} href="/dashboard/clientes" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← Cancelar</Link>
           <h1 className="text-2xl font-bold mt-1">Asignar cuentas de Meta Ads</h1>
           <p className="text-gray-400 text-sm mt-1">Elegí a qué cliente pertenece cada cuenta publicitaria. Podés dejar sin asignar las que no uses.</p>
         </div>

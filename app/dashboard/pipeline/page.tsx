@@ -197,7 +197,7 @@ export default function PipelinePage() {
 
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Link href="/dashboard" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← Panel Admin</Link>
+            <Link prefetch={false} href="/dashboard" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← Panel Admin</Link>
             <h1 className="text-2xl font-bold mt-1">Pipeline</h1>
           </div>
           <button onClick={() => setShowForm(!showForm)}

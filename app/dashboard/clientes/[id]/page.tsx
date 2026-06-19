@@ -52,7 +52,7 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
-            <Link href="/dashboard/clientes" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">
+            <Link prefetch={false} href="/dashboard/clientes" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">
               ← Clientes
             </Link>
             <div className="flex items-center gap-3 mt-1">
@@ -67,7 +67,7 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
               )}
             </div>
           </div>
-          <Link href={`/dashboard/clientes/${id}/editar`}
+          <Link prefetch={false} href={`/dashboard/clientes/${id}/editar`}
             className="bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
             Editar
           </Link>
@@ -156,7 +156,7 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
                   { label: 'Investigación de mercado', href: `/dashboard/clientes/${id}/investigacion` },
                   { label: 'Tareas', href: `/dashboard/tareas?cliente=${id}` },
                 ].map(link => (
-                  <Link key={link.href} href={link.href}
+                  <Link prefetch={false} key={link.href} href={link.href}
                     className="flex items-center justify-between p-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-sm">
                     <span>{link.label}</span>
                     <span className="text-gray-500">→</span>

@@ -101,7 +101,7 @@ export default function CalculadoraPage() {
       <div className="max-w-4xl mx-auto px-6 py-8">
 
         <div className="mb-8">
-          <Link href={`/dashboard/clientes/${id}`} className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← {clientName || 'Cliente'}</Link>
+          <Link prefetch={false} href={`/dashboard/clientes/${id}`} className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← {clientName || 'Cliente'}</Link>
           <h1 className="text-2xl font-bold mt-1">Calculadora de presupuesto</h1>
           <p className="text-gray-400 text-sm mt-1">Calculá los KPIs objetivo a partir del ticket promedio y cuánto estás dispuesto a invertir en publicidad</p>
         </div>

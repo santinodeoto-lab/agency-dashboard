@@ -223,7 +223,7 @@ export default function InvestigacionPage() {
 
         <div className="flex items-start justify-between mb-8">
           <div>
-            <Link href={`/dashboard/clientes/${id}`} className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← {clientName}</Link>
+            <Link prefetch={false} href={`/dashboard/clientes/${id}`} className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← {clientName}</Link>
             <h1 className="text-2xl font-bold mt-1">Investigación de mercado</h1>
           </div>
           <span className={`text-sm mt-2 transition-opacity ${saveStatus === 'idle' ? 'opacity-0' : 'opacity-100'} ${saveStatus === 'saved' ? 'text-green-400' : 'text-gray-400'}`}>

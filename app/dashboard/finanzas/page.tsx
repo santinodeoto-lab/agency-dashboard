@@ -91,7 +91,7 @@ export default function FinanzasPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Link href="/dashboard" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← Panel Admin</Link>
+            <Link prefetch={false} href="/dashboard" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← Panel Admin</Link>
             <h1 className="text-2xl font-bold mt-1">Finanzas</h1>
           </div>
           <select
@@ -151,7 +151,7 @@ export default function FinanzasPage() {
                     {payment.clients?.name?.charAt(0)}
                   </div>
                   <div>
-                    <Link href={`/dashboard/clientes/${payment.clients?.id}`}
+                    <Link prefetch={false} href={`/dashboard/clientes/${payment.clients?.id}`}
                       className="font-semibold hover:text-blue-400 transition-colors">
                       {payment.clients?.name}
                     </Link>

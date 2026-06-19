@@ -40,7 +40,7 @@ export default async function DashboardPage() {
             <h1 className="text-2xl font-bold">Panel Admin</h1>
             <p className="text-gray-400 text-sm mt-0.5">Bienvenido, {profile?.full_name ?? user.email}</p>
           </div>
-          <Link href="/logout" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">
+          <Link prefetch={false} href="/logout" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">
             Cerrar sesión
           </Link>
         </div>
