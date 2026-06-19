@@ -142,7 +142,8 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
             {metaConnections && metaConnections.length > 0 ? (
               <div className="space-y-2 mb-3">
                 {metaConnections.map(conn => {
-                  const expiresAt = conn.token_expires_at ? new Date(conn.token_expires_at) : null
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const expiresAt = (conn as any).token_expires_at ? new Date((conn as any).token_expires_at) : null
                   const daysLeft = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null
                   const expiringSoon = daysLeft !== null && daysLeft <= 10
                   const expired = daysLeft !== null && daysLeft <= 0
