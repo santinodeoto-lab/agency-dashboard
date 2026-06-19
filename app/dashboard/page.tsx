@@ -31,7 +31,8 @@ export default async function DashboardPage() {
       .select('id, name, status, fee_amount, fee_currency')
       .eq('status', 'active')
       .order('name')
-    clientes = fallback.data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    clientes = fallback.data as any
   }
 
   return (
