@@ -6,14 +6,27 @@ export async function GET() {
   const cookieStore = await cookies()
   const allCookies = cookieStore.getAll()
 
-  const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKeyPrefix = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 20)
+
+  let user = null
+  let authError = null
+
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase.auth.getUser()
+    user = data.user ? { id: data.user.id, email: data.user.email } : null
+    authError = error?.message ?? null
+  } catch (e: any) {
+    authError = e.message
+  }
 
   return NextResponse.json({
+    supabaseUrl,
+    anonKeyPrefix,
     cookieNames: allCookies.map(c => c.name),
     cookieCount: allCookies.length,
-    hasSupabaseCookie: allCookies.some(c => c.name.includes('auth-token')),
-    user: user ? { id: user.id, email: user.email } : null,
-    error: error?.message ?? null,
+    user,
+    authError,
   })
 }
