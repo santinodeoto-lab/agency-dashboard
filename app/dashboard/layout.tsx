@@ -9,10 +9,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: clients }, { data: profile }] = await Promise.all([
+  const [clientsResult, { data: profile }] = await Promise.all([
     supabase.from('clients').select('id, name, logo_url, status').eq('status', 'active').order('name'),
     supabase.from('profiles').select('agency_name, avatar_url').eq('id', user.id).single(),
   ])
+  // If logo_url column missing, fall back without it
+  const clients = clientsResult.error?.message?.includes('logo_url')
+    ? (await supabase.from('clients').select('id, name, status').eq('status', 'active').order('name')).data
+    : clientsResult.data
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex">

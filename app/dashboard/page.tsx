@@ -20,7 +20,7 @@ export default async function DashboardPage() {
 
   const { data: clientes } = await supabase
     .from('clients')
-    .select('id, name, status, fee_amount, fee_currency, campaign_objective_types(key)')
+    .select('id, name, status, fee_amount, fee_currency, objectives, logo_url')
     .eq('status', 'active')
     .order('name')
 
@@ -35,7 +35,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {clientes?.map((cliente) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const objKey = (cliente.campaign_objective_types as any)?.key ?? ''
+          const objKey = ((cliente as any).objectives?.[0]) ?? ''
           return (
             <Link
               key={cliente.id}
