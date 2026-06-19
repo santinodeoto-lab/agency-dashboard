@@ -31,7 +31,6 @@ export default function CalculadoraPage() {
   const [history, setHistory] = useState<Calc[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [result, setResult] = useState<Calc | null>(null)
 
   const [form, setForm] = useState({
     mode: 'sales',
@@ -90,8 +89,7 @@ export default function CalculadoraPage() {
         set_active: true,
       }),
     })
-    const data = await res.json()
-    setResult(data)
+    await res.json()
     await loadData()
     setSaving(false)
   }

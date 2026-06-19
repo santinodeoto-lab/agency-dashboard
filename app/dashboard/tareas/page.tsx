@@ -30,10 +30,6 @@ const PRIORITY_LABELS: Record<string, string> = {
   normal: 'Normal',
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  task: 'Tarea',
-  learning: 'Aprendizaje',
-}
 
 export default function TareasPage() {
   const supabase = createClient()
