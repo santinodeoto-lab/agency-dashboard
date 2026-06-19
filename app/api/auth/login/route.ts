@@ -12,9 +12,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(loginErrorUrl, { status: 303 })
   }
 
-  // Creamos la respuesta de redirect primero para poder agregarle las cookies
-  let redirectUrl = new URL('/dashboard', request.url)
-  const response = NextResponse.redirect(redirectUrl, { status: 303 })
+  const cookiesSet: Array<{ name: string; valueLen: number }> = []
+
+  const response = NextResponse.redirect(new URL('/dashboard', request.url), { status: 303 })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          // Setear en la respuesta de redirect directamente
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options ?? {})
+            cookiesSet.push({ name, valueLen: value.length })
           })
         },
       },
@@ -40,22 +40,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(loginErrorUrl, { status: 303 })
   }
 
-  // Verificar rol
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', data.user.id)
-    .single()
-
-  if (profile?.role !== 'admin') {
-    redirectUrl = new URL('/portal', request.url)
-    // Crear nueva respuesta con el redirect correcto pero conservando las cookies
-    const portalResponse = NextResponse.redirect(redirectUrl, { status: 303 })
-    response.cookies.getAll().forEach(({ name, value, ...opts }) => {
-      portalResponse.cookies.set(name, value, opts)
-    })
-    return portalResponse
-  }
+  // Agregar header de diagnóstico para verificar que las cookies se están seteando
+  response.headers.set('X-Cookies-Set', JSON.stringify(cookiesSet))
 
   return response
 }
