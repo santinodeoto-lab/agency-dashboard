@@ -11,7 +11,7 @@ export default async function MetricasPage({ params }: { params: Promise<{ id: s
 
   const { data: cliente } = await supabase
     .from('clients')
-    .select('name, campaign_objective_types(key)')
+    .select('name, objectives')
     .eq('id', id)
     .single()
 
@@ -24,7 +24,7 @@ export default async function MetricasPage({ params }: { params: Promise<{ id: s
     .eq('platform', 'meta')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const objectiveKey = (cliente.campaign_objective_types as any)?.key ?? 'leads'
+  const objectiveKey = ((cliente as any).objectives?.[0]) ?? 'leads'
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
