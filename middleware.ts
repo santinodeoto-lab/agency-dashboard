@@ -4,9 +4,10 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
+  // Anon client — maneja cookies de sesión correctamente
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
@@ -27,48 +28,29 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Si no está autenticado y no está en /login, redirigir a login
+  // Sin sesión → login
   if (!user && pathname !== '/login') {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Si está autenticado y va a /login, redirigir según su rol
+  // Con sesión en /login → redirigir según rol
   if (user && pathname === '/login') {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    const role = await getRole(user.id)
+    return NextResponse.redirect(new URL(role === 'admin' ? '/dashboard' : '/portal', request.url))
+  }
 
-    if (profile?.role === 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    } else {
+  // Rutas /dashboard → solo admin
+  if (user && pathname.startsWith('/dashboard')) {
+    const role = await getRole(user.id)
+    if (role !== 'admin') {
       return NextResponse.redirect(new URL('/portal', request.url))
     }
   }
 
-  // Proteger rutas /dashboard solo para admin
-  if (pathname.startsWith('/dashboard')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user!.id)
-      .single()
-
-    if (profile?.role !== 'admin') {
-      return NextResponse.redirect(new URL('/portal', request.url))
-    }
-  }
-
-  // Proteger rutas /portal solo para clientes
-  if (pathname.startsWith('/portal')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user!.id)
-      .single()
-
-    if (profile?.role === 'admin') {
+  // Rutas /portal → solo clientes
+  if (user && pathname.startsWith('/portal')) {
+    const role = await getRole(user.id)
+    if (role === 'admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
@@ -76,6 +58,17 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse
 }
 
+async function getRole(userId: string): Promise<string | null> {
+  // Service role para leer perfiles sin que RLS bloquee
+  const admin = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  )
+  const { data } = await admin.from('profiles').select('role').eq('id', userId).single()
+  return data?.role ?? null
+}
+
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
