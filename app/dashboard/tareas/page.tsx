@@ -38,6 +38,7 @@ export default function TareasPage() {
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [filtroCliente, setFiltroCliente] = useState('')
   const [filtroPrioridad, setFiltroPrioridad] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('')
@@ -93,23 +94,50 @@ export default function TareasPage() {
     setUpdating(null)
   }
 
+  function startEdit(task: Task) {
+    setEditingId(task.id)
+    setForm({
+      title: task.title,
+      description: task.description ?? '',
+      type: task.type,
+      priority: task.priority,
+      due_date: task.due_date ?? '',
+      client_id: task.client_id ?? '',
+    })
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function resetForm() {
+    setForm({ title: '', description: '', type: 'task', priority: 'normal', due_date: '', client_id: '' })
+    setEditingId(null)
+    setShowForm(false)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    await fetch('/api/tareas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: form.title,
-        description: form.description || null,
-        type: form.type,
-        priority: form.priority,
-        due_date: form.due_date || null,
-        client_id: form.client_id || null,
-        status: 'pending',
-      }),
-    })
-    setForm({ title: '', description: '', type: 'task', priority: 'normal', due_date: '', client_id: '' })
-    setShowForm(false)
+    const payload = {
+      title: form.title,
+      description: form.description || null,
+      type: form.type,
+      priority: form.priority,
+      due_date: form.due_date || null,
+      client_id: form.client_id || null,
+    }
+    if (editingId) {
+      await fetch(`/api/tareas/${editingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    } else {
+      await fetch('/api/tareas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, status: 'pending' }),
+      })
+    }
+    resetForm()
     await loadTasks()
   }
 
@@ -138,7 +166,7 @@ export default function TareasPage() {
             </div>
           </div>
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => showForm ? resetForm() : setShowForm(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm"
           >
             {showForm ? 'Cancelar' : '+ Nueva tarea'}
@@ -148,7 +176,7 @@ export default function TareasPage() {
         {/* Formulario nueva tarea */}
         {showForm && (
           <form onSubmit={handleSubmit} className="bg-gray-900 rounded-xl p-6 mb-6 space-y-4">
-            <h2 className="font-semibold text-gray-300">Nueva tarea</h2>
+            <h2 className="font-semibold text-gray-300">{editingId ? 'Editar tarea' : 'Nueva tarea'}</h2>
             <div>
               <input
                 value={form.title}
@@ -190,7 +218,7 @@ export default function TareasPage() {
             </div>
             <button type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors text-sm">
-              Guardar tarea
+              {editingId ? 'Guardar cambios' : 'Guardar tarea'}
             </button>
           </form>
         )}
@@ -263,13 +291,23 @@ export default function TareasPage() {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(task.id)}
-                  disabled={updating === task.id}
-                  className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none flex-shrink-0"
-                >
-                  ×
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => startEdit(task)}
+                    disabled={updating === task.id}
+                    className="text-gray-600 hover:text-blue-400 transition-colors text-sm leading-none"
+                    title="Editar tarea"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    onClick={() => handleDelete(task.id)}
+                    disabled={updating === task.id}
+                    className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             ))}
           </div>
