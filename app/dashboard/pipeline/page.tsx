@@ -28,15 +28,6 @@ const STAGES = [
   { key: 'lost', label: 'Perdido', color: 'border-red-500' },
 ]
 
-const STAGE_COLORS: Record<string, string> = {
-  lead: 'bg-gray-700 text-gray-300',
-  contacted: 'bg-blue-500/20 text-blue-400',
-  proposal_sent: 'bg-yellow-500/20 text-yellow-400',
-  negotiating: 'bg-orange-500/20 text-orange-400',
-  won: 'bg-green-500/20 text-green-400',
-  lost: 'bg-red-500/20 text-red-400',
-}
-
 const OBJETIVOS = [
   { key: 'sales', label: 'Ventas online' },
   { key: 'leads', label: 'Generación de leads' },
@@ -81,7 +72,6 @@ export default function PipelinePage() {
     const { data } = await supabase
       .from('pipeline_opportunities')
       .select('*')
-      .not('stage', 'in', '("won","lost")')
       .order('created_at', { ascending: false })
     setOpps(data ?? [])
     setLoading(false)
@@ -113,7 +103,7 @@ export default function PipelinePage() {
       .eq('key', convertModal.primary_objective)
       .maybeSingle()
 
-    const { error } = await supabase.from('clients').insert({
+    const { data: nuevoCliente, error } = await supabase.from('clients').insert({
       name: opp.contact_name.toUpperCase(),
       company_name: opp.company_name || null,
       email: opp.email || null,
@@ -124,8 +114,9 @@ export default function PipelinePage() {
       payment_due_day: parseInt(convertModal.payment_due_day),
       payment_alert_days: 3,
       primary_objective_id: objetivo?.id ?? null,
+      objectives: convertModal.primary_objective ? [convertModal.primary_objective] : [],
       status: 'active',
-    })
+    }).select('id').single()
 
     if (error) {
       alert('Error al crear el cliente: ' + error.message)
@@ -133,11 +124,10 @@ export default function PipelinePage() {
       return
     }
 
-    await fetch(`/api/pipeline/${opp.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stage: 'won' }),
-    })
+    // Relacionar la oportunidad con el cliente recién creado y marcarla como ganada
+    await supabase.from('pipeline_opportunities')
+      .update({ stage: 'won', converted_client_id: nuevoCliente?.id ?? null, updated_at: new Date().toISOString() })
+      .eq('id', opp.id)
 
     setConvertModal(null)
     setConverting(false)
@@ -186,14 +176,15 @@ export default function PipelinePage() {
     await loadOpps()
   }
 
-  const proyeccion = opps.reduce((sum, o) => {
+  const activeOpps = opps.filter(o => !['won', 'lost'].includes(o.stage))
+  const proyeccion = activeOpps.reduce((sum, o) => {
     if (!o.expected_monthly_value || !o.close_probability) return sum
     return sum + (o.expected_monthly_value * o.close_probability / 100)
   }, 0)
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
 
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -210,11 +201,11 @@ export default function PipelinePage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-gray-900 rounded-xl p-5">
             <p className="text-gray-400 text-sm">Oportunidades activas</p>
-            <p className="text-3xl font-bold mt-1">{opps.length}</p>
+            <p className="text-3xl font-bold mt-1">{activeOpps.length}</p>
           </div>
           <div className="bg-gray-900 rounded-xl p-5">
             <p className="text-gray-400 text-sm">Valor potencial</p>
-            <p className="text-3xl font-bold mt-1">USD {opps.reduce((s, o) => s + (o.expected_monthly_value ?? 0), 0).toLocaleString()}</p>
+            <p className="text-3xl font-bold mt-1">USD {activeOpps.reduce((s, o) => s + (o.expected_monthly_value ?? 0), 0).toLocaleString()}</p>
           </div>
           <div className="bg-gray-900 rounded-xl p-5">
             <p className="text-gray-400 text-sm">Proyección ponderada</p>
@@ -290,73 +281,74 @@ export default function PipelinePage() {
           </form>
         )}
 
-        {/* Lista */}
+        {/* Kanban */}
         {loading ? (
           <p className="text-gray-400 text-center py-12">Cargando...</p>
         ) : opps.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-gray-400">No hay oportunidades activas.</p>
+            <p className="text-gray-400">No hay oportunidades.</p>
             <button onClick={() => setShowForm(true)} className="mt-4 text-blue-400 text-sm hover:underline">+ Agregar una</button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {opps.map(opp => (
-              <div key={opp.id} className={`bg-gray-900 rounded-xl border-l-2 ${STAGES.find(s => s.key === opp.stage)?.color ?? 'border-gray-700'}`}>
-                <div className="p-5 flex items-start justify-between cursor-pointer" onClick={() => setExpandedId(expandedId === opp.id ? null : opp.id)}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                      {opp.contact_name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-semibold">{opp.contact_name}</p>
-                      {opp.company_name && <p className="text-gray-400 text-xs">{opp.company_name}</p>}
-                    </div>
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {STAGES.map(stage => {
+              const colOpps = opps.filter(o => o.stage === stage.key)
+              const total = colOpps.reduce((s, o) => s + (o.expected_monthly_value ?? 0), 0)
+              return (
+                <div key={stage.key} className="flex-shrink-0 w-64">
+                  <div className={`flex items-center justify-between px-3 py-2 mb-3 rounded-lg bg-gray-900 border-l-2 ${stage.color}`}>
+                    <span className="text-sm font-semibold">{stage.label}</span>
+                    <span className="text-xs text-gray-500">{colOpps.length} · USD {total.toLocaleString()}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STAGE_COLORS[opp.stage]}`}>
-                      {STAGES.find(s => s.key === opp.stage)?.label}
-                    </span>
-                    {opp.expected_monthly_value && (
-                      <p className="font-bold">{opp.currency} {opp.expected_monthly_value.toLocaleString()}</p>
-                    )}
-                    {opp.close_probability && (
-                      <p className="text-gray-400 text-sm">{opp.close_probability}%</p>
-                    )}
+                  <div className="space-y-2">
+                    {colOpps.map(opp => (
+                      <div key={opp.id} className="bg-gray-900 rounded-xl border border-gray-800">
+                        <div className="p-3 cursor-pointer" onClick={() => setExpandedId(expandedId === opp.id ? null : opp.id)}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                              {opp.contact_name.charAt(0)}
+                            </div>
+                            <p className="font-medium text-sm truncate">{opp.contact_name}</p>
+                          </div>
+                          {opp.expected_monthly_value != null && (
+                            <p className="text-sm font-bold mt-2">{opp.currency} {opp.expected_monthly_value.toLocaleString()}<span className="text-xs text-gray-500 font-normal">/mes</span></p>
+                          )}
+                        </div>
+
+                        {expandedId === opp.id && (
+                          <div className="px-3 pb-3 border-t border-gray-800 pt-3 space-y-2">
+                            {opp.notes && <p className="text-gray-300 text-xs">{opp.notes}</p>}
+                            {opp.email && <p className="text-gray-400 text-xs">✉ {opp.email}</p>}
+                            {opp.phone && <p className="text-gray-400 text-xs">📞 {opp.phone}</p>}
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex gap-1 flex-wrap">
+                                {STAGES.filter(s => s.key !== opp.stage).map(s => (
+                                  <button key={s.key} onClick={() => handleStageChange(opp.id, s.key)} disabled={updating === opp.id}
+                                    className="text-xs px-2 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors">
+                                    → {s.label}
+                                  </button>
+                                ))}
+                              </div>
+                              {opp.stage !== 'won' && (
+                                <button onClick={() => openConvertModal(opp)} disabled={updating === opp.id}
+                                  className="text-xs px-2 py-1.5 rounded-md bg-green-500/10 hover:bg-green-500/20 text-green-400 transition-colors font-medium">
+                                  ✓ Convertir en cliente
+                                </button>
+                              )}
+                              <button onClick={() => handleDelete(opp.id)} disabled={updating === opp.id}
+                                className="text-xs px-2 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors">
+                                Eliminar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {colOpps.length === 0 && <p className="text-xs text-gray-600 px-3 py-4 text-center">—</p>}
                   </div>
                 </div>
-
-                {expandedId === opp.id && (
-                  <div className="px-5 pb-5 border-t border-gray-800 pt-4 space-y-3">
-                    {opp.notes && <p className="text-gray-300 text-sm">{opp.notes}</p>}
-                    {opp.email && <p className="text-gray-400 text-sm">✉ {opp.email}</p>}
-                    {opp.phone && <p className="text-gray-400 text-sm">📞 {opp.phone}</p>}
-                    {opp.expected_close_date && (
-                      <p className="text-gray-400 text-sm">Cierre estimado: {new Date(opp.expected_close_date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-                    )}
-                    <div className="flex gap-2 flex-wrap">
-                      {STAGES.filter(s => s.key !== opp.stage && s.key !== 'won' && s.key !== 'lost').map(s => (
-                        <button key={s.key} onClick={() => handleStageChange(opp.id, s.key)} disabled={updating === opp.id}
-                          className="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors">
-                          → {s.label}
-                        </button>
-                      ))}
-                      <button onClick={() => openConvertModal(opp)} disabled={updating === opp.id}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 transition-colors font-medium">
-                        Convertir en cliente
-                      </button>
-                      <button onClick={() => handleStageChange(opp.id, 'lost')} disabled={updating === opp.id}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 transition-colors">
-                        Marcar como perdido
-                      </button>
-                      <button onClick={() => handleDelete(opp.id)} disabled={updating === opp.id}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors ml-auto">
-                        Eliminar
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
