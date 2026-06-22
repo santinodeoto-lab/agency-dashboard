@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { Notifications } from './Notifications'
 
 interface Client {
   id: string
@@ -38,8 +39,8 @@ export function Sidebar({ clients, agencyName, avatarUrl }: Props) {
   return (
     <aside className="fixed left-0 top-0 h-screen w-52 bg-gray-900 border-r border-gray-800 flex flex-col z-20">
       {/* Logo / Inicio */}
-      <div className="px-4 py-5 border-b border-gray-800">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
+      <div className="px-4 py-5 border-b border-gray-800 flex items-center justify-between gap-2">
+        <Link href="/dashboard" className="flex items-center gap-3 group min-w-0">
           {avatarUrl ? (
             <img src={avatarUrl} alt="logo" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
           ) : (
@@ -51,6 +52,7 @@ export function Sidebar({ clients, agencyName, avatarUrl }: Props) {
             {agencyName ?? 'Mi Agencia'}
           </span>
         </Link>
+        <Notifications />
       </div>
 
       {/* Nav */}
