@@ -76,23 +76,46 @@ export default function CotizacionesPage() {
     e.preventDefault()
     setSaving(true)
     setError('')
+
+    const feeAmount = form.fee_amount ? parseFloat(form.fee_amount) : null
+
+    // 1. Crear la oportunidad en el pipeline (etapa "Propuesta enviada")
+    const { data: opp } = await supabase.from('pipeline_opportunities').insert({
+      contact_name: form.client_name,
+      company_name: form.company_name || null,
+      stage: 'proposal_sent',
+      expected_monthly_value: feeAmount,
+      currency: form.fee_currency,
+      close_probability: 50,
+    }).select('id').single()
+
+    // 2. Crear la cotización vinculada a esa oportunidad
     const { data, error: err } = await supabase.from('quotes').insert({
       client_name: form.client_name,
       company_name: form.company_name || null,
       objective: form.objective || null,
       platforms: form.platforms,
-      fee_amount: form.fee_amount ? parseFloat(form.fee_amount) : null,
+      fee_amount: feeAmount,
       fee_currency: form.fee_currency,
       ad_spend_suggestion: form.ad_spend_suggestion ? parseFloat(form.ad_spend_suggestion) : null,
       ad_spend_currency: form.ad_spend_currency,
       discount_note: form.discount_note || null,
       validity_days: parseInt(form.validity_days) || 7,
+      opportunity_id: opp?.id ?? null,
     }).select('id').single()
     setSaving(false)
     if (err) { setError(err.message); return }
     setShowForm(false)
     setForm({ client_name: '', company_name: '', objective: '', platforms: ['meta'], fee_amount: '', fee_currency: 'USD', ad_spend_suggestion: '', ad_spend_currency: 'USD', discount_note: '', validity_days: '7' })
     if (data) window.location.href = `/dashboard/cotizaciones/${data.id}`
+  }
+
+  async function handleDelete(e: React.MouseEvent, quote: Quote) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm(`¿Eliminar la cotización de ${quote.client_name}?`)) return
+    await supabase.from('quotes').delete().eq('id', quote.id)
+    setQuotes(qs => qs.filter(q => q.id !== quote.id))
   }
 
   return (
@@ -200,6 +223,9 @@ export default function CotizacionesPage() {
                 <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[q.status]}`}>
                   {STATUS_LABELS[q.status]}
                 </span>
+                <button onClick={(e) => handleDelete(e, q)}
+                  className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none px-1"
+                  title="Eliminar cotización">×</button>
               </div>
             </Link>
           ))}
