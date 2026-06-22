@@ -20,6 +20,7 @@ const NAV = [
   { label: 'Finanzas', href: '/dashboard/finanzas' },
   { label: 'Tareas', href: '/dashboard/tareas' },
   { label: 'Pipeline', href: '/dashboard/pipeline' },
+  { label: 'Cotizaciones', href: '/dashboard/cotizaciones' },
 ]
 
 export function Sidebar({ clients, agencyName, avatarUrl }: Props) {
