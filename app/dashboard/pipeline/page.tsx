@@ -54,6 +54,8 @@ export default function PipelinePage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [converting, setConverting] = useState(false)
   const [convertModal, setConvertModal] = useState<ConvertModal | null>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     contact_name: '',
@@ -295,15 +297,28 @@ export default function PipelinePage() {
               const colOpps = opps.filter(o => o.stage === stage.key)
               const total = colOpps.reduce((s, o) => s + (o.expected_monthly_value ?? 0), 0)
               return (
-                <div key={stage.key} className="flex-shrink-0 w-64">
-                  <div className={`flex items-center justify-between px-3 py-2 mb-3 rounded-lg bg-gray-900 border-l-2 ${stage.color}`}>
+                <div key={stage.key} className="flex-shrink-0 w-64"
+                  onDragOver={(e) => { e.preventDefault(); if (dragOverStage !== stage.key) setDragOverStage(stage.key) }}
+                  onDragLeave={() => setDragOverStage(s => s === stage.key ? null : s)}
+                  onDrop={() => {
+                    if (draggingId) {
+                      const dragged = opps.find(o => o.id === draggingId)
+                      if (dragged && dragged.stage !== stage.key) handleStageChange(draggingId, stage.key)
+                    }
+                    setDraggingId(null); setDragOverStage(null)
+                  }}>
+                  <div className={`flex items-center justify-between px-3 py-2 mb-3 rounded-lg bg-gray-900 border-l-2 ${stage.color} ${dragOverStage === stage.key ? 'ring-2 ring-blue-500' : ''}`}>
                     <span className="text-sm font-semibold">{stage.label}</span>
                     <span className="text-xs text-gray-500">{colOpps.length} · USD {total.toLocaleString()}</span>
                   </div>
                   <div className="space-y-2">
                     {colOpps.map(opp => (
-                      <div key={opp.id} className="bg-gray-900 rounded-xl border border-gray-800">
-                        <div className="p-3 cursor-pointer" onClick={() => setExpandedId(expandedId === opp.id ? null : opp.id)}>
+                      <div key={opp.id}
+                        draggable
+                        onDragStart={() => setDraggingId(opp.id)}
+                        onDragEnd={() => { setDraggingId(null); setDragOverStage(null) }}
+                        className={`bg-gray-900 rounded-xl border border-gray-800 transition-opacity ${draggingId === opp.id ? 'opacity-40' : ''}`}>
+                        <div className="p-3 cursor-grab active:cursor-grabbing" onClick={() => setExpandedId(expandedId === opp.id ? null : opp.id)}>
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
                               {opp.contact_name.charAt(0)}
