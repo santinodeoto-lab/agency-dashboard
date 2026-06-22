@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { DeleteConnection } from './DeleteConnection'
+import { Bitacora } from './Bitacora'
 
 const OBJ_COLORS: Record<string, string> = {
   sales:    'bg-blue-500/20 text-blue-400',
@@ -189,19 +190,7 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
           {/* Bitácora */}
           <div className="bg-gray-900 rounded-xl p-5">
             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Bitácora</h2>
-            <LogForm clientId={id} />
-            <div className="mt-4 space-y-3">
-              {logs && logs.length > 0 ? logs.map(log => (
-                <div key={log.id} className="border-l-2 border-gray-700 pl-3">
-                  <p className="text-sm text-gray-200">{log.content}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(log.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              )) : (
-                <p className="text-gray-500 text-sm">Sin entradas todavía.</p>
-              )}
-            </div>
+            <Bitacora clientId={id} initialLogs={logs ?? []} />
           </div>
 
           {/* Notas */}
@@ -224,18 +213,3 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
   )
 }
 
-function LogForm({ clientId }: { clientId: string }) {
-  return (
-    <form action={`/api/clientes/${clientId}/log`} method="POST" className="flex gap-2">
-      <input
-        name="content"
-        placeholder="Agregar entrada..."
-        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-      />
-      <button type="submit"
-        className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-        +
-      </button>
-    </form>
-  )
-}
