@@ -70,6 +70,9 @@ export default function TareasPage() {
   useEffect(() => {
     loadTasks()
     loadClients()
+    // Si se entró desde un cliente (?cliente=ID), filtrar por ese cliente
+    const c = new URLSearchParams(window.location.search).get('cliente')
+    if (c) setFiltroCliente(c)
   }, [])
 
   async function handleComplete(task: Task) {
