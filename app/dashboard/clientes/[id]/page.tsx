@@ -26,6 +26,7 @@ const MODULES = [
   { label: 'Métricas', desc: 'Resultados de campañas', href: (id: string) => `/dashboard/clientes/${id}/metricas`, icon: '📊' },
   { label: 'Calculadora', desc: 'Presupuestos y proyecciones', href: (id: string) => `/dashboard/clientes/${id}/calculadora`, icon: '🧮' },
   { label: 'Investigación', desc: 'Mercado y competencia', href: (id: string) => `/dashboard/clientes/${id}/investigacion`, icon: '🔍' },
+  { label: 'Guiones', desc: 'Guiones y creativos', href: (id: string) => `/dashboard/clientes/${id}/guiones`, icon: '🎬' },
   { label: 'Tareas', desc: 'Pendientes del cliente', href: (id: string) => `/dashboard/tareas?cliente=${id}`, icon: '✓' },
 ]
 
