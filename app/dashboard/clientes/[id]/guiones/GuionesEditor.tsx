@@ -13,7 +13,7 @@ type Script = {
   uploaded: boolean
 }
 
-const FORMATOS = ['Video', 'Imagen', 'Carrusel', 'Reel', 'Historia', 'Texto']
+const FORMATOS = ['Video 30 seg máximo', 'Video 40 seg máximo', 'Carrusel', 'Placa']
 
 export function GuionesEditor({ clientId, creativosUrl }: { clientId: string; creativosUrl: string }) {
   const supabase = createClient()
@@ -44,8 +44,11 @@ export function GuionesEditor({ clientId, creativosUrl }: { clientId: string; cr
     if (data) setScripts(s => [...s, data as Script])
   }
 
-  async function updateField(id: string, field: keyof Script, value: string | boolean) {
+  function setLocal(id: string, field: keyof Script, value: string | boolean) {
     setScripts(s => s.map(x => x.id === id ? { ...x, [field]: value } : x))
+  }
+
+  async function save(id: string, field: keyof Script, value: string | boolean) {
     await supabase.from('client_scripts').update({ [field]: value, updated_at: new Date().toISOString() }).eq('id', id)
   }
 
@@ -62,66 +65,107 @@ export function GuionesEditor({ clientId, creativosUrl }: { clientId: string; cr
     setEditingCreativos(false)
   }
 
-  const inputCls = 'w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500'
+  const cellInput = 'w-full bg-gray-800 border border-gray-700 rounded-md px-2 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500'
+  const labelCell = 'sticky left-0 z-10 bg-gray-800 border border-gray-800 px-3 py-2 font-semibold text-gray-300 text-xs uppercase tracking-wider align-top w-40 min-w-40'
+  const dataCell = 'border border-gray-800 px-2 py-2 align-top min-w-[300px] w-[300px]'
 
   if (loading) return <p className="text-gray-400 text-sm">Cargando...</p>
 
   return (
     <div className="space-y-4">
+      <div className="overflow-x-auto border border-gray-800 rounded-xl bg-gray-900">
+        <table className="border-collapse">
+          <tbody>
+            {/* TF header */}
+            <tr>
+              <td className={`${labelCell} bg-gray-700 text-white`}>Creativos</td>
+              {scripts.map((s, i) => (
+                <td key={s.id} className={`${dataCell} bg-gray-700 text-center`}>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="font-bold text-white">TF {i + 1}</span>
+                    <button onClick={() => remove(s.id)} className="text-gray-400 hover:text-red-400 transition-colors text-base leading-none">×</button>
+                  </div>
+                </td>
+              ))}
+              <td className="border border-gray-800 px-2 py-2 align-middle min-w-[120px]">
+                <button onClick={addScript} className="text-blue-400 hover:text-blue-300 text-sm font-medium whitespace-nowrap">+ Agregar TF</button>
+              </td>
+            </tr>
+
+            {/* Formato */}
+            <tr>
+              <td className={labelCell}>Formato</td>
+              {scripts.map(s => (
+                <td key={s.id} className={dataCell}>
+                  <select value={s.formato ?? ''} onChange={e => { setLocal(s.id, 'formato', e.target.value); save(s.id, 'formato', e.target.value) }} className={cellInput}>
+                    <option value="">— Elegir —</option>
+                    {FORMATOS.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </td>
+              ))}
+              <td className="border border-gray-800"></td>
+            </tr>
+
+            {/* Idea del anuncio */}
+            <tr>
+              <td className={labelCell}>Idea del anuncio</td>
+              {scripts.map(s => (
+                <td key={s.id} className={dataCell}>
+                  <textarea value={s.idea ?? ''} rows={2} placeholder="Concepto / ángulo"
+                    onChange={e => setLocal(s.id, 'idea', e.target.value)} onBlur={e => save(s.id, 'idea', e.target.value)}
+                    className={`${cellInput} resize-y`} />
+                </td>
+              ))}
+              <td className="border border-gray-800"></td>
+            </tr>
+
+            {/* Guión */}
+            <tr>
+              <td className={labelCell}>Guión</td>
+              {scripts.map(s => (
+                <td key={s.id} className={dataCell}>
+                  <textarea value={s.guion ?? ''} rows={8} placeholder="Texto del guión, locución, escenas, CTA..."
+                    onChange={e => setLocal(s.id, 'guion', e.target.value)} onBlur={e => save(s.id, 'guion', e.target.value)}
+                    className={`${cellInput} resize-y`} />
+                </td>
+              ))}
+              <td className="border border-gray-800"></td>
+            </tr>
+
+            {/* Referencias */}
+            <tr>
+              <td className={labelCell}>Referencias</td>
+              {scripts.map(s => (
+                <td key={s.id} className={dataCell}>
+                  <textarea value={s.referencias ?? ''} rows={3} placeholder="Links o descripción de referencias"
+                    onChange={e => setLocal(s.id, 'referencias', e.target.value)} onBlur={e => save(s.id, 'referencias', e.target.value)}
+                    className={`${cellInput} resize-y`} />
+                </td>
+              ))}
+              <td className="border border-gray-800"></td>
+            </tr>
+
+            {/* Estado / Subido */}
+            <tr>
+              <td className={labelCell}>Estado</td>
+              {scripts.map(s => (
+                <td key={s.id} className={dataCell}>
+                  <select value={s.uploaded ? 'si' : 'no'} onChange={e => { const v = e.target.value === 'si'; setLocal(s.id, 'uploaded', v); save(s.id, 'uploaded', v) }}
+                    className={`${cellInput} ${s.uploaded ? 'text-green-400' : 'text-gray-400'}`}>
+                    <option value="no">No subido</option>
+                    <option value="si">Subido al Drive</option>
+                  </select>
+                </td>
+              ))}
+              <td className="border border-gray-800"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       {scripts.length === 0 && (
-        <p className="text-gray-500 text-sm">Todavía no hay guiones. Agregá el primero.</p>
+        <p className="text-gray-500 text-sm">Todavía no hay guiones. Tocá <span className="text-blue-400">+ Agregar TF</span> para crear el primero.</p>
       )}
-
-      {scripts.map((s, i) => (
-        <div key={s.id} className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-          <div className="flex items-center justify-between mb-4">
-            <span className="font-bold text-blue-400">TF {i + 1}</span>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">Subido</span>
-                <select value={s.uploaded ? 'si' : 'no'} onChange={e => updateField(s.id, 'uploaded', e.target.value === 'si')}
-                  className={`text-xs rounded-md px-2 py-1 border focus:outline-none ${s.uploaded ? 'bg-green-500/20 text-green-400 border-green-500/40' : 'bg-gray-800 text-gray-400 border-gray-700'}`}>
-                  <option value="no">No</option>
-                  <option value="si">Sí</option>
-                </select>
-              </div>
-              <button onClick={() => remove(s.id)} className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1.5">Formato</label>
-              <select value={s.formato ?? ''} onChange={e => updateField(s.id, 'formato', e.target.value)} className={inputCls}>
-                <option value="">— Elegir —</option>
-                {FORMATOS.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1.5">Idea del anuncio</label>
-              <input value={s.idea ?? ''} onChange={e => setScripts(arr => arr.map(x => x.id === s.id ? { ...x, idea: e.target.value } : x))}
-                onBlur={e => updateField(s.id, 'idea', e.target.value)} className={inputCls} placeholder="Concepto / ángulo" />
-            </div>
-          </div>
-
-          <div className="mt-3">
-            <label className="block text-xs text-gray-400 mb-1.5">Guión</label>
-            <textarea value={s.guion ?? ''} onChange={e => setScripts(arr => arr.map(x => x.id === s.id ? { ...x, guion: e.target.value } : x))}
-              onBlur={e => updateField(s.id, 'guion', e.target.value)} rows={5} className={`${inputCls} resize-y`} placeholder="Texto del guión / locución / escenas" />
-          </div>
-
-          <div className="mt-3">
-            <label className="block text-xs text-gray-400 mb-1.5">Referencias</label>
-            <textarea value={s.referencias ?? ''} onChange={e => setScripts(arr => arr.map(x => x.id === s.id ? { ...x, referencias: e.target.value } : x))}
-              onBlur={e => updateField(s.id, 'referencias', e.target.value)} rows={2} className={`${inputCls} resize-y`} placeholder="Links o descripción de referencias" />
-          </div>
-        </div>
-      ))}
-
-      <button onClick={addScript}
-        className="w-full border border-dashed border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white rounded-xl py-3 text-sm font-medium transition-colors">
-        + Agregar guión (TF {scripts.length + 1})
-      </button>
 
       {/* Subir creativos */}
       <div className="pt-4 flex flex-col items-center gap-2">
@@ -133,7 +177,7 @@ export function GuionesEditor({ clientId, creativosUrl }: { clientId: string; cr
         )}
         {editingCreativos ? (
           <div className="w-full max-w-lg flex gap-2">
-            <input value={creativos} onChange={e => setCreativos(e.target.value)} placeholder="https://drive.google.com/drive/folders/..." className={inputCls} />
+            <input value={creativos} onChange={e => setCreativos(e.target.value)} placeholder="https://drive.google.com/drive/folders/..." className={cellInput} />
             <button onClick={saveCreativos} disabled={savingCreativos}
               className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex-shrink-0">Guardar</button>
           </div>
