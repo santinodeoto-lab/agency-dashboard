@@ -3,41 +3,57 @@
 import { useState } from 'react'
 
 export function ShareGuionesButton({ shareToken }: { shareToken: string | null }) {
+  const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
 
   if (!shareToken) return null
 
+  const url = `${window.location.origin}/share/${shareToken}/guiones`
+
   async function copy() {
-    const url = `${window.location.origin}/share/${shareToken}/guiones`
     await navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
   return (
-    <button
-      onClick={copy}
-      className={`inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
-        copied
-          ? 'bg-green-600/20 text-green-400 border border-green-600/30'
-          : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700'
-      }`}
-    >
-      {copied ? (
-        <>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          Link copiado
-        </>
-      ) : (
-        <>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-          </svg>
-          Compartir guiones
-        </>
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+      >
+        <span>📤</span> Compartir guiones
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-30 p-4">
+          <p className="text-sm font-semibold text-white mb-1">Link para el cliente</p>
+          <p className="text-xs text-gray-400 mb-3">Solo verán los guiones pendientes. No se necesita cuenta.</p>
+          <div className="flex gap-2">
+            <input
+              readOnly
+              value={url}
+              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none truncate"
+            />
+            <button
+              onClick={copy}
+              className={`flex-shrink-0 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
+                copied ? 'bg-green-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {copied ? '✓ Copiado' : 'Copiar'}
+            </button>
+          </div>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 block text-center text-xs text-gray-500 hover:text-blue-400 transition-colors"
+          >
+            Abrir vista previa →
+          </a>
+        </div>
       )}
-    </button>
+    </div>
   )
 }

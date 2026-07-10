@@ -26,6 +26,7 @@ export default async function PublicGuionesPage({ params }: { params: Promise<{ 
     .from('client_scripts')
     .select('id, position, formato, idea, guion, referencias, uploaded')
     .eq('client_id', cliente.id)
+    .eq('uploaded', false)
     .order('position', { ascending: true })
 
   const list = scripts ?? []
@@ -87,11 +88,9 @@ export default async function PublicGuionesPage({ params }: { params: Promise<{ 
                         </span>
                       )}
                     </div>
-                    {s.uploaded && (
-                      <span className="text-xs text-green-400 bg-green-400/10 border border-green-400/20 rounded-full px-2.5 py-0.5 font-medium">
-                        ✓ Subido al Drive
-                      </span>
-                    )}
+                    <span className="text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-full px-2.5 py-0.5 font-medium">
+                      Pendiente
+                    </span>
                   </div>
 
                   <div className="p-5 space-y-5">
