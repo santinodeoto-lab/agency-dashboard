@@ -14,11 +14,6 @@ const OBJ_COLORS: Record<string, string> = {
 const OBJ_LABELS: Record<string, string> = {
   sales: 'Ventas', leads: 'Leads', whatsapp: 'WhatsApp', branding: 'Branding',
 }
-const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-500/20 text-green-400',
-  paused: 'bg-yellow-500/20 text-yellow-400',
-  inactive: 'bg-red-500/20 text-red-400',
-}
 const STATUS_LABELS: Record<string, string> = {
   active: 'Activo', paused: 'Pausado', inactive: 'Inactivo',
 }
