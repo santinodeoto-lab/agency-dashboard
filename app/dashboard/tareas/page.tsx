@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
@@ -19,44 +19,43 @@ type Task = {
 type Client = { id: string; name: string }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  urgent: 'bg-red-500/20 text-red-400 border-red-500/30',
-  high: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  normal: 'bg-gray-700 text-gray-300 border-gray-600',
+  urgent: 'bg-red-500/15 text-red-400 border-red-500/30',
+  high: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+  normal: 'bg-gray-700/50 text-gray-400 border-gray-600/50',
 }
+const PRIORITY_LABELS: Record<string, string> = { urgent: 'Urgente', high: 'Alta', normal: 'Normal' }
 
-const PRIORITY_LABELS: Record<string, string> = {
-  urgent: 'Urgente',
-  high: 'Alta',
-  normal: 'Normal',
-}
+const COLUMNS = [
+  { id: 'pending',     label: 'Por hacer',   dot: 'bg-gray-400',  border: 'border-gray-600',  count_color: 'text-gray-400' },
+  { id: 'in_progress', label: 'En progreso', dot: 'bg-blue-500',  border: 'border-blue-500/60', count_color: 'text-blue-400' },
+  { id: 'done',        label: 'Listo',       dot: 'bg-green-500', border: 'border-green-500/60', count_color: 'text-green-400' },
+]
 
+const NEXT_STATUS: Record<string, string> = { pending: 'in_progress', in_progress: 'done' }
+const PREV_STATUS: Record<string, string> = { in_progress: 'pending', done: 'in_progress' }
+const NEXT_LABEL: Record<string, string> = { pending: 'En progreso →', in_progress: 'Listo →' }
+const PREV_LABEL: Record<string, string> = { in_progress: '← Por hacer', done: '← En progreso' }
 
 export default function TareasPage() {
   const supabase = createClient()
   const [tasks, setTasks] = useState<Task[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState<string | null>(null)
+  const [moving, setMoving] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [filtroCliente, setFiltroCliente] = useState('')
   const [filtroPrioridad, setFiltroPrioridad] = useState('')
-  const [filtroTipo, setFiltroTipo] = useState('')
+  const editCardRef = useRef<HTMLDivElement>(null)
 
   const [form, setForm] = useState({
-    title: '',
-    description: '',
-    type: 'task',
-    priority: 'normal',
-    due_date: '',
-    client_id: '',
+    title: '', description: '', type: 'task', priority: 'normal', due_date: '', client_id: '', status: 'pending',
   })
 
   async function loadTasks() {
     const { data } = await supabase
       .from('tasks')
       .select('*, clients(name)')
-      .neq('status', 'done')
       .order('priority', { ascending: true })
       .order('due_date', { ascending: true, nullsFirst: false })
     setTasks(data ?? [])
@@ -71,245 +70,295 @@ export default function TareasPage() {
   useEffect(() => {
     loadTasks()
     loadClients()
-    // Si se entró desde un cliente (?cliente=ID), filtrar por ese cliente
-    const c = new URLSearchParams(window.location.search).get('cliente')
-    if (c) setFiltroCliente(c)
+    const p = new URLSearchParams(window.location.search)
+    if (p.get('cliente')) setFiltroCliente(p.get('cliente')!)
   }, [])
 
-  async function handleComplete(task: Task) {
-    setUpdating(task.id)
-    await fetch(`/api/tareas/${task.id}`, {
+  async function moveTask(id: string, newStatus: string) {
+    setMoving(id)
+    await fetch(`/api/tareas/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'done' }),
+      body: JSON.stringify({ status: newStatus }),
     })
     await loadTasks()
-    setUpdating(null)
+    setMoving(null)
   }
 
   async function handleDelete(id: string) {
-    setUpdating(id)
+    if (!confirm('¿Eliminar esta tarea?')) return
+    setMoving(id)
     await fetch(`/api/tareas/${id}`, { method: 'DELETE' })
     await loadTasks()
-    setUpdating(null)
+    setMoving(null)
   }
 
   function startEdit(task: Task) {
     setEditingId(task.id)
     setForm({
-      title: task.title,
-      description: task.description ?? '',
-      type: task.type,
-      priority: task.priority,
-      due_date: task.due_date ?? '',
-      client_id: task.client_id ?? '',
+      title: task.title, description: task.description ?? '', type: task.type,
+      priority: task.priority, due_date: task.due_date ?? '', client_id: task.client_id ?? '', status: task.status,
     })
-    setShowForm(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setTimeout(() => editCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
   }
 
-  function resetForm() {
-    setForm({ title: '', description: '', type: 'task', priority: 'normal', due_date: '', client_id: '' })
+  function cancelEdit() {
     setEditingId(null)
-    setShowForm(false)
+    setForm({ title: '', description: '', type: 'task', priority: 'normal', due_date: '', client_id: '', status: 'pending' })
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function saveEdit(id: string) {
+    setMoving(id)
+    await fetch(`/api/tareas/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: form.title, description: form.description || null, type: form.type,
+        priority: form.priority, due_date: form.due_date || null, client_id: form.client_id || null,
+      }),
+    })
+    setEditingId(null)
+    await loadTasks()
+    setMoving(null)
+  }
+
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    const payload = {
-      title: form.title,
-      description: form.description || null,
-      type: form.type,
-      priority: form.priority,
-      due_date: form.due_date || null,
-      client_id: form.client_id || null,
-    }
-    if (editingId) {
-      await fetch(`/api/tareas/${editingId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-    } else {
-      await fetch('/api/tareas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, status: 'pending' }),
-      })
-    }
-    resetForm()
+    await fetch('/api/tareas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: form.title, description: form.description || null, type: form.type,
+        priority: form.priority, due_date: form.due_date || null, client_id: form.client_id || null, status: 'pending',
+      }),
+    })
+    setForm({ title: '', description: '', type: 'task', priority: 'normal', due_date: '', client_id: '', status: 'pending' })
+    setShowForm(false)
     await loadTasks()
   }
 
-  const PRIORITY_ORDER = { urgent: 0, high: 1, normal: 2 }
+  const today = new Date().toISOString().slice(0, 10)
+
   const filtered = tasks
     .filter(t => !filtroCliente || t.client_id === filtroCliente)
     .filter(t => !filtroPrioridad || t.priority === filtroPrioridad)
-    .filter(t => !filtroTipo || t.type === filtroTipo)
-    .sort((a, b) => (PRIORITY_ORDER[a.priority as keyof typeof PRIORITY_ORDER] ?? 2) - (PRIORITY_ORDER[b.priority as keyof typeof PRIORITY_ORDER] ?? 2))
 
-  const urgentes = filtered.filter(t => t.priority === 'urgent').length
+  const byStatus = (status: string) => filtered.filter(t => t.status === status)
+  const total = filtered.length
+  const doneCount = filtered.filter(t => t.status === 'done').length
+  const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0
+
+  const inputCls = 'bg-[#0d0d14] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/60 transition-colors'
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <div className="max-w-5xl mx-auto px-6 py-8">
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
+      <div className="px-6 py-8 max-w-7xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <Link href="/dashboard" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">← Panel Admin</Link>
+            <Link href="/dashboard" className="text-gray-600 text-xs hover:text-gray-400 transition-colors">← Panel Admin</Link>
             <div className="flex items-center gap-3 mt-1">
-              <h1 className="text-2xl font-bold">Tareas</h1>
-              {urgentes > 0 && (
-                <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{urgentes} urgente{urgentes > 1 ? 's' : ''}</span>
+              <h1 className="text-xl font-bold">Tareas</h1>
+              {total > 0 && (
+                <span className="text-gray-500 text-sm">{total} tareas · {pct}% completado</span>
               )}
             </div>
           </div>
-          <button
-            onClick={() => showForm ? resetForm() : setShowForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm"
-          >
-            {showForm ? 'Cancelar' : '+ Nueva tarea'}
-          </button>
+          <div className="flex items-center gap-2">
+            <select value={filtroCliente} onChange={e => setFiltroCliente(e.target.value)} className={`${inputCls} text-xs`}>
+              <option value="">Todos los clientes</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <select value={filtroPrioridad} onChange={e => setFiltroPrioridad(e.target.value)} className={`${inputCls} text-xs`}>
+              <option value="">Todas las prioridades</option>
+              <option value="urgent">Urgente</option>
+              <option value="high">Alta</option>
+              <option value="normal">Normal</option>
+            </select>
+            <button
+              onClick={() => { cancelEdit(); setShowForm(s => !s) }}
+              className="bg-white text-black text-sm font-semibold px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1.5"
+            >
+              <span className="text-base leading-none">+</span> Nueva tarea
+            </button>
+          </div>
         </div>
 
-        {/* Formulario nueva tarea */}
+        {/* Progress bar */}
+        {total > 0 && (
+          <div className="mb-6">
+            <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-green-500 rounded-full transition-all duration-500"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="flex justify-end mt-1">
+              <span className="text-xs text-gray-600">{doneCount}/{total} listas</span>
+            </div>
+          </div>
+        )}
+
+        {/* Nueva tarea form */}
         {showForm && (
-          <form onSubmit={handleSubmit} className="bg-gray-900 rounded-xl p-6 mb-6 space-y-4">
-            <h2 className="font-semibold text-gray-300">{editingId ? 'Editar tarea' : 'Nueva tarea'}</h2>
-            <div>
-              <input
-                value={form.title}
-                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                required
-                placeholder="Título de la tarea *"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <textarea
-                value={form.description}
-                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Descripción (opcional)"
-                rows={2}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 resize-none"
-              />
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
-                <option value="task">Tarea</option>
-                <option value="learning">Aprendizaje</option>
-              </select>
-              <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+          <form onSubmit={handleCreate} className="bg-[#0d0d14] border border-white/[0.08] rounded-2xl p-5 mb-6 space-y-3">
+            <p className="text-sm font-semibold text-gray-300">Nueva tarea</p>
+            <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required
+              placeholder="Título *" className={`w-full ${inputCls}`} autoFocus />
+            <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="Descripción (opcional)" rows={2} className={`w-full ${inputCls} resize-none`} />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} className={inputCls}>
                 <option value="normal">Normal</option>
                 <option value="high">Alta</option>
                 <option value="urgent">Urgente</option>
               </select>
-              <select value={form.client_id} onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+              <select value={form.client_id} onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))} className={inputCls}>
                 <option value="">Sin cliente</option>
                 {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-              <input type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-              />
+              <input type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} className={inputCls} />
+              <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className={inputCls}>
+                <option value="task">Tarea</option>
+                <option value="learning">Aprendizaje</option>
+              </select>
             </div>
-            <button type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors text-sm">
-              {editingId ? 'Guardar cambios' : 'Guardar tarea'}
-            </button>
+            <div className="flex gap-2">
+              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">Guardar</button>
+              <button type="button" onClick={() => setShowForm(false)} className="text-gray-500 hover:text-gray-300 text-sm px-4 py-2 rounded-lg transition-colors">Cancelar</button>
+            </div>
           </form>
         )}
 
-        {/* Filtros */}
-        <div className="flex gap-3 mb-6 flex-wrap">
-          <select value={filtroCliente} onChange={e => setFiltroCliente(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
-            <option value="">Todos los clientes</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <select value={filtroPrioridad} onChange={e => setFiltroPrioridad(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
-            <option value="">Todas las prioridades</option>
-            <option value="urgent">Urgente</option>
-            <option value="high">Alta</option>
-            <option value="normal">Normal</option>
-          </select>
-          <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
-            <option value="">Todos los tipos</option>
-            <option value="task">Tareas</option>
-            <option value="learning">Aprendizajes</option>
-          </select>
-          <span className="text-gray-400 text-sm self-center">{filtered.length} tarea{filtered.length !== 1 ? 's' : ''}</span>
-        </div>
-
-        {/* Lista */}
+        {/* Kanban */}
         {loading ? (
-          <p className="text-gray-400 text-center py-12">Cargando...</p>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-gray-400">No hay tareas pendientes.</p>
-            <button onClick={() => setShowForm(true)} className="mt-4 text-blue-400 text-sm hover:underline">+ Crear una tarea</button>
-          </div>
+          <p className="text-gray-500 text-center py-20 text-sm">Cargando...</p>
         ) : (
-          <div className="space-y-2">
-            {filtered.map(task => (
-              <div key={task.id}
-                className={`bg-gray-900 rounded-xl p-4 flex items-start gap-4 border-l-2 ${
-                  task.priority === 'urgent' ? 'border-red-500' : task.priority === 'high' ? 'border-orange-500' : 'border-gray-700'
-                }`}>
-                <button
-                  onClick={() => handleComplete(task)}
-                  disabled={updating === task.id}
-                  className="mt-0.5 w-5 h-5 rounded-full border-2 border-gray-600 hover:border-green-500 flex-shrink-0 transition-colors"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium">{task.title}</p>
-                  {task.description && <p className="text-gray-400 text-sm mt-0.5">{task.description}</p>}
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${PRIORITY_COLORS[task.priority]}`}>
-                      {PRIORITY_LABELS[task.priority]}
-                    </span>
-                    {task.type === 'learning' && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                        Aprendizaje
-                      </span>
+          <div className="grid grid-cols-3 gap-4">
+            {COLUMNS.map(col => {
+              const colTasks = byStatus(col.id)
+              return (
+                <div key={col.id} className="flex flex-col min-h-[400px]">
+                  {/* Column header */}
+                  <div className={`flex items-center gap-2 px-1 mb-3 pb-3 border-b-2 ${col.border}`}>
+                    <span className={`w-2 h-2 rounded-full ${col.dot}`} />
+                    <span className="text-sm font-semibold text-gray-300">{col.label}</span>
+                    <span className={`text-xs font-bold ml-auto ${col.count_color}`}>{colTasks.length}</span>
+                  </div>
+
+                  {/* Cards */}
+                  <div className="space-y-3 flex-1">
+                    {colTasks.length === 0 && (
+                      <div className="border border-dashed border-white/[0.06] rounded-xl h-20 flex items-center justify-center">
+                        <p className="text-xs text-gray-700">Arrastrá una tarea aquí</p>
+                      </div>
                     )}
-                    {task.clients && (
-                      <Link href={`/dashboard/clientes/${task.client_id}`}
-                        className="text-xs text-gray-400 hover:text-blue-400 transition-colors">
-                        {task.clients.name}
-                      </Link>
-                    )}
-                    {task.due_date && (
-                      <span className={`text-xs ${new Date(task.due_date) < new Date() ? 'text-red-400' : 'text-gray-400'}`}>
-                        Vence {new Date(task.due_date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
-                      </span>
-                    )}
+                    {colTasks.map(task => {
+                      const isEditing = editingId === task.id
+                      const isOverdue = task.due_date && task.due_date < today && task.status !== 'done'
+
+                      return (
+                        <div
+                          key={task.id}
+                          ref={isEditing ? editCardRef : undefined}
+                          className={`bg-[#0d0d14] border rounded-xl overflow-hidden transition-all ${
+                            isEditing ? 'border-blue-500/40' : 'border-white/[0.07] hover:border-white/[0.14]'
+                          } ${moving === task.id ? 'opacity-50' : ''}`}
+                        >
+                          {isEditing ? (
+                            <div className="p-3 space-y-2">
+                              <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                                className={`w-full ${inputCls} text-sm font-medium`} autoFocus />
+                              <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                                rows={2} placeholder="Descripción" className={`w-full ${inputCls} resize-none text-xs`} />
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} className={`${inputCls} text-xs`}>
+                                  <option value="normal">Normal</option>
+                                  <option value="high">Alta</option>
+                                  <option value="urgent">Urgente</option>
+                                </select>
+                                <input type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} className={`${inputCls} text-xs`} />
+                                <select value={form.client_id} onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))} className={`${inputCls} text-xs col-span-2`}>
+                                  <option value="">Sin cliente</option>
+                                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                              </div>
+                              <div className="flex gap-1.5 pt-0.5">
+                                <button onClick={() => saveEdit(task.id)} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-1.5 rounded-lg transition-colors">Guardar</button>
+                                <button onClick={cancelEdit} className="flex-1 text-gray-500 hover:text-gray-300 text-xs py-1.5 rounded-lg border border-white/[0.07] transition-colors">Cancelar</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="p-3">
+                                {/* Priority + delete */}
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  {task.priority !== 'normal' ? (
+                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${PRIORITY_COLORS[task.priority]}`}>
+                                      {PRIORITY_LABELS[task.priority]}
+                                    </span>
+                                  ) : <span />}
+                                  <button onClick={() => handleDelete(task.id)} className="text-gray-700 hover:text-red-400 transition-colors text-base leading-none -mt-0.5">×</button>
+                                </div>
+
+                                {/* Title + description */}
+                                <button onClick={() => startEdit(task)} className="w-full text-left group">
+                                  <p className="text-sm font-semibold text-gray-100 group-hover:text-blue-300 transition-colors leading-snug">{task.title}</p>
+                                  {task.description && (
+                                    <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{task.description}</p>
+                                  )}
+                                </button>
+
+                                {/* Meta */}
+                                <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                                  {task.due_date && (
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${isOverdue ? 'bg-red-500/15 text-red-400' : 'bg-white/[0.05] text-gray-500'}`}>
+                                      {isOverdue ? '⚠ ' : ''}
+                                      {new Date(task.due_date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                                      {isOverdue ? ' · vencida' : ''}
+                                    </span>
+                                  )}
+                                  {task.clients && (
+                                    <Link href={`/dashboard/clientes/${task.client_id}`}
+                                      onClick={e => e.stopPropagation()}
+                                      className="text-[10px] text-gray-600 hover:text-blue-400 transition-colors truncate max-w-[90px]">
+                                      {task.clients.name}
+                                    </Link>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Move buttons */}
+                              <div className={`border-t border-white/[0.05] flex ${PREV_STATUS[col.id] && NEXT_STATUS[col.id] ? 'divide-x divide-white/[0.05]' : ''}`}>
+                                {PREV_STATUS[col.id] && (
+                                  <button
+                                    onClick={() => moveTask(task.id, PREV_STATUS[col.id])}
+                                    disabled={moving === task.id}
+                                    className="flex-1 text-[10px] text-gray-600 hover:text-gray-300 hover:bg-white/[0.03] py-2 transition-colors text-left px-3"
+                                  >
+                                    {PREV_LABEL[col.id]}
+                                  </button>
+                                )}
+                                {NEXT_STATUS[col.id] && (
+                                  <button
+                                    onClick={() => moveTask(task.id, NEXT_STATUS[col.id])}
+                                    disabled={moving === task.id}
+                                    className="flex-1 text-[10px] text-gray-600 hover:text-gray-300 hover:bg-white/[0.03] py-2 transition-colors text-right px-3"
+                                  >
+                                    {NEXT_LABEL[col.id]}
+                                  </button>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => startEdit(task)}
-                    disabled={updating === task.id}
-                    className="text-gray-600 hover:text-blue-400 transition-colors text-sm leading-none"
-                    title="Editar tarea"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    onClick={() => handleDelete(task.id)}
-                    disabled={updating === task.id}
-                    className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
