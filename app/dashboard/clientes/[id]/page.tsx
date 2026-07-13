@@ -55,36 +55,69 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
     <div className="min-h-screen bg-[#0a0a0f] p-6 max-w-5xl">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between mb-7">
-        <div className="flex items-center gap-4">
-          {cliente.logo_url ? (
-            <img src={cliente.logo_url} alt={cliente.name} className="w-14 h-14 rounded-2xl object-cover flex-shrink-0 ring-1 ring-white/10" />
-          ) : (
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center text-xl font-bold text-white flex-shrink-0">
-              {cliente.name.charAt(0)}
-            </div>
+      <div className="flex items-center gap-6 mb-7">
+        {/* Logo */}
+        {cliente.logo_url ? (
+          <img src={cliente.logo_url} alt={cliente.name} className="w-14 h-14 rounded-2xl object-cover flex-shrink-0 ring-1 ring-white/10" />
+        ) : (
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center text-xl font-bold text-white flex-shrink-0">
+            {cliente.name.charAt(0)}
+          </div>
+        )}
+
+        {/* Nombre + badges */}
+        <div className="flex-shrink-0">
+          <h1 className="text-xl font-bold text-white tracking-tight">{cliente.name}</h1>
+          {cliente.company_name && (
+            <p className="text-gray-500 text-sm mt-0.5">{cliente.company_name}</p>
           )}
-          <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">{cliente.name}</h1>
-            {cliente.company_name && (
-              <p className="text-gray-500 text-sm mt-0.5">{cliente.company_name}</p>
-            )}
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
-                cliente.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                cliente.status === 'paused' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                'bg-red-500/10 text-red-400 border-red-500/20'
-              }`}>
-                {STATUS_LABELS[cliente.status] ?? cliente.status}
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
+              cliente.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+              cliente.status === 'paused' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+              'bg-red-500/10 text-red-400 border-red-500/20'
+            }`}>
+              {STATUS_LABELS[cliente.status] ?? cliente.status}
+            </span>
+            {objectives.map(key => (
+              <span key={key} className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${OBJ_COLORS[key] ?? 'bg-gray-700/50 text-gray-300 border-gray-600/50'}`}>
+                {OBJ_LABELS[key] ?? key}
               </span>
-              {objectives.map(key => (
-                <span key={key} className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${OBJ_COLORS[key] ?? 'bg-gray-700/50 text-gray-300 border-gray-600/50'}`}>
-                  {OBJ_LABELS[key] ?? key}
-                </span>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
+
+        {/* Stats rápidas — ocupa el espacio central */}
+        <div className="flex-1 flex items-center gap-3 px-6">
+          <div className="h-8 w-px bg-white/[0.06]" />
+          <div className="flex gap-6">
+            <div>
+              <p className="text-[10px] text-gray-600 uppercase tracking-widest">Fee mensual</p>
+              <p className="text-sm font-bold text-white mt-0.5">{cliente.fee_currency} {Number(cliente.fee_amount).toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-600 uppercase tracking-widest">Cobro</p>
+              <p className="text-sm font-medium text-gray-300 mt-0.5">{cliente.payment_condition === 'advance' ? 'Adelantado' : 'Mes vencido'} · Día {cliente.payment_due_day}</p>
+            </div>
+            {metaConnections && metaConnections.length > 0 && (
+              <div>
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest">Meta Ads</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                  <p className="text-sm font-medium text-gray-300">{metaConnections.length} cuenta{metaConnections.length > 1 ? 's' : ''}</p>
+                </div>
+              </div>
+            )}
+            {(cliente.email || cliente.phone) && (
+              <div>
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest">Contacto</p>
+                <p className="text-sm font-medium text-gray-300 mt-0.5 truncate max-w-[160px]">{cliente.email ?? cliente.phone}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Botones */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <ShareButton shareToken={(cliente as any).share_token ?? null} />
@@ -107,84 +140,85 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
         ))}
       </div>
 
-      {/* ── Cuerpo: 3 columnas ── */}
+      {/* ── Cuerpo ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-        {/* Col 1: Ficha */}
-        <div className="bg-[#0d0d14] border border-white/[0.07] rounded-xl p-4 self-start">
-          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Ficha</p>
-          <div className="space-y-2.5">
-            <div className="flex items-baseline justify-between">
-              <span className="text-[11px] text-gray-600">Fee mensual</span>
-              <span className="text-sm font-bold text-white">{cliente.fee_currency} {Number(cliente.fee_amount).toLocaleString()}</span>
-            </div>
-            <div className="flex items-baseline justify-between">
-              <span className="text-[11px] text-gray-600">Condición</span>
-              <span className="text-xs text-gray-300">{cliente.payment_condition === 'advance' ? 'Adelantado' : 'Mes vencido'} · Día {cliente.payment_due_day}</span>
-            </div>
-            {cliente.email && (
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[11px] text-gray-600 flex-shrink-0">Email</span>
-                <span className="text-xs text-gray-300 truncate">{cliente.email}</span>
-              </div>
-            )}
-            {cliente.phone && (
+        {/* Col izquierda: Ficha + Meta Ads */}
+        <div className="space-y-3">
+          <div className="bg-[#0d0d14] border border-white/[0.07] rounded-xl p-4">
+            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Ficha</p>
+            <div className="space-y-2.5">
               <div className="flex items-baseline justify-between">
-                <span className="text-[11px] text-gray-600">Teléfono</span>
-                <span className="text-xs text-gray-300">{cliente.phone}</span>
+                <span className="text-[11px] text-gray-600">Fee mensual</span>
+                <span className="text-sm font-bold text-white">{cliente.fee_currency} {Number(cliente.fee_amount).toLocaleString()}</span>
               </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-[11px] text-gray-600">Condición</span>
+                <span className="text-xs text-gray-300">{cliente.payment_condition === 'advance' ? 'Adelantado' : 'Mes vencido'} · Día {cliente.payment_due_day}</span>
+              </div>
+              {cliente.email && (
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-[11px] text-gray-600 flex-shrink-0">Email</span>
+                  <span className="text-xs text-gray-300 truncate">{cliente.email}</span>
+                </div>
+              )}
+              {cliente.phone && (
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[11px] text-gray-600">Teléfono</span>
+                  <span className="text-xs text-gray-300">{cliente.phone}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-[#0d0d14] border border-white/[0.07] rounded-xl p-4">
+            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Meta Ads</p>
+            {metaConnections && metaConnections.length > 0 ? (
+              <div className="space-y-2 mb-3">
+                {metaConnections.map(conn => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const expiresAt = (conn as any).token_expires_at ? new Date((conn as any).token_expires_at) : null
+                  const daysLeft = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null
+                  const expiringSoon = daysLeft !== null && daysLeft <= 10
+                  const expired = daysLeft !== null && daysLeft <= 0
+                  return (
+                    <div key={conn.id}>
+                      <div className="flex items-center justify-between bg-white/[0.04] rounded-lg px-3 py-2 gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium truncate text-gray-200">{conn.account_name}</p>
+                          <p className="text-[10px] text-gray-600">act_{conn.account_id}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={`w-1.5 h-1.5 rounded-full ${conn.status === 'active' && !expired ? 'bg-green-400' : 'bg-red-400'}`} />
+                          <DeleteConnection connectionId={conn.id} />
+                        </div>
+                      </div>
+                      {(expiringSoon || expired) && (
+                        <div className={`mt-1 rounded-lg px-3 py-2 flex items-center justify-between gap-2 ${expired ? 'bg-red-500/10 border border-red-500/20' : 'bg-yellow-500/10 border border-yellow-500/20'}`}>
+                          <p className={`text-xs ${expired ? 'text-red-400' : 'text-yellow-400'}`}>
+                            {expired ? 'Token vencido' : `Vence en ${daysLeft}d`}
+                          </p>
+                          <a href={`/api/meta/connect?client_id=${id}`} className={`text-xs font-medium px-2 py-0.5 rounded-md transition-colors flex-shrink-0 ${expired ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30'}`}>
+                            Renovar
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-600 mb-3">Sin cuentas conectadas</p>
             )}
+            <a href={`/api/meta/connect?client_id=${id}`}
+              className="flex items-center justify-center w-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] text-gray-400 hover:text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors">
+              {metaConnections && metaConnections.length > 0 ? '+ Agregar cuenta' : 'Conectar Meta Ads'}
+            </a>
           </div>
         </div>
 
-        {/* Col 2: Meta Ads */}
-        <div className="bg-[#0d0d14] border border-white/[0.07] rounded-xl p-4 self-start">
-          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Meta Ads</p>
-          {metaConnections && metaConnections.length > 0 ? (
-            <div className="space-y-2 mb-3">
-              {metaConnections.map(conn => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const expiresAt = (conn as any).token_expires_at ? new Date((conn as any).token_expires_at) : null
-                const daysLeft = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null
-                const expiringSoon = daysLeft !== null && daysLeft <= 10
-                const expired = daysLeft !== null && daysLeft <= 0
-                return (
-                  <div key={conn.id}>
-                    <div className="flex items-center justify-between bg-white/[0.04] rounded-lg px-3 py-2 gap-2">
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium truncate text-gray-200">{conn.account_name}</p>
-                        <p className="text-[10px] text-gray-600">act_{conn.account_id}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className={`w-1.5 h-1.5 rounded-full ${conn.status === 'active' && !expired ? 'bg-green-400' : 'bg-red-400'}`} />
-                        <DeleteConnection connectionId={conn.id} />
-                      </div>
-                    </div>
-                    {(expiringSoon || expired) && (
-                      <div className={`mt-1 rounded-lg px-3 py-2 flex items-center justify-between gap-2 ${expired ? 'bg-red-500/10 border border-red-500/20' : 'bg-yellow-500/10 border border-yellow-500/20'}`}>
-                        <p className={`text-xs ${expired ? 'text-red-400' : 'text-yellow-400'}`}>
-                          {expired ? 'Token vencido' : `Vence en ${daysLeft}d`}
-                        </p>
-                        <a href={`/api/meta/connect?client_id=${id}`} className={`text-xs font-medium px-2 py-0.5 rounded-md transition-colors flex-shrink-0 ${expired ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30'}`}>
-                          Renovar
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-gray-600 mb-3">Sin cuentas conectadas</p>
-          )}
-          <a href={`/api/meta/connect?client_id=${id}`}
-            className="flex items-center justify-center w-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] text-gray-400 hover:text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors">
-            {metaConnections && metaConnections.length > 0 ? '+ Agregar cuenta' : 'Conectar Meta Ads'}
-          </a>
-        </div>
-
-        {/* Col 3: Bitácora + Notas */}
-        <div className="space-y-4">
+        {/* Col derecha: Bitácora + Notas */}
+        <div className="md:col-span-2 space-y-4">
           <div className="bg-[#0d0d14] border border-white/[0.07] rounded-xl p-4">
             <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Bitácora</p>
             <Bitacora clientId={id} initialLogs={logs ?? []} />
