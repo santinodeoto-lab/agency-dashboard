@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, DragEvent } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
@@ -42,6 +42,8 @@ export default function TareasPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [moving, setMoving] = useState<string | null>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [filtroCliente, setFiltroCliente] = useState('')
@@ -73,6 +75,37 @@ export default function TareasPage() {
     const p = new URLSearchParams(window.location.search)
     if (p.get('cliente')) setFiltroCliente(p.get('cliente')!)
   }, [])
+
+  function onDragStart(e: DragEvent, id: string) {
+    setDraggingId(id)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('taskId', id)
+  }
+
+  function onDragEnd() {
+    setDraggingId(null)
+    setDragOverCol(null)
+  }
+
+  function onDragOver(e: DragEvent, colId: string) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverCol(colId)
+  }
+
+  function onDragLeave() {
+    setDragOverCol(null)
+  }
+
+  async function onDrop(e: DragEvent, colId: string) {
+    e.preventDefault()
+    const id = e.dataTransfer.getData('taskId')
+    setDragOverCol(null)
+    setDraggingId(null)
+    const task = tasks.find(t => t.id === id)
+    if (!task || task.status === colId) return
+    await moveTask(id, colId)
+  }
 
   async function moveTask(id: string, newStatus: string) {
     setMoving(id)
@@ -239,7 +272,13 @@ export default function TareasPage() {
             {COLUMNS.map(col => {
               const colTasks = byStatus(col.id)
               return (
-                <div key={col.id} className="flex flex-col min-h-[400px]">
+                <div
+                  key={col.id}
+                  className="flex flex-col min-h-[400px]"
+                  onDragOver={e => onDragOver(e, col.id)}
+                  onDragLeave={onDragLeave}
+                  onDrop={e => onDrop(e, col.id)}
+                >
                   {/* Column header */}
                   <div className={`flex items-center gap-2 px-1 mb-3 pb-3 border-b-2 ${col.border}`}>
                     <span className={`w-2 h-2 rounded-full ${col.dot}`} />
@@ -248,9 +287,9 @@ export default function TareasPage() {
                   </div>
 
                   {/* Cards */}
-                  <div className="space-y-3 flex-1">
+                  <div className={`space-y-3 flex-1 rounded-xl transition-colors ${dragOverCol === col.id && draggingId ? 'bg-blue-500/[0.03]' : ''}`}>
                     {colTasks.length === 0 && (
-                      <div className="border border-dashed border-white/[0.06] rounded-xl h-20 flex items-center justify-center">
+                      <div className={`border border-dashed rounded-xl h-20 flex items-center justify-center transition-colors ${dragOverCol === col.id ? 'border-blue-500/40 bg-blue-500/[0.04]' : 'border-white/[0.06]'}`}>
                         <p className="text-xs text-gray-700">Arrastrá una tarea aquí</p>
                       </div>
                     )}
@@ -262,9 +301,12 @@ export default function TareasPage() {
                         <div
                           key={task.id}
                           ref={isEditing ? editCardRef : undefined}
-                          className={`bg-[#0d0d14] border rounded-xl overflow-hidden transition-all ${
+                          draggable={!isEditing}
+                          onDragStart={e => onDragStart(e, task.id)}
+                          onDragEnd={onDragEnd}
+                          className={`bg-[#0d0d14] border rounded-xl overflow-hidden transition-all select-none ${
                             isEditing ? 'border-blue-500/40' : 'border-white/[0.07] hover:border-white/[0.14]'
-                          } ${moving === task.id ? 'opacity-50' : ''}`}
+                          } ${draggingId === task.id ? 'opacity-40 scale-[0.98]' : ''} ${moving === task.id ? 'opacity-50' : ''} ${!isEditing ? 'cursor-grab active:cursor-grabbing' : ''}`}
                         >
                           {isEditing ? (
                             <div className="p-3 space-y-2">
